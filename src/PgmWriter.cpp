@@ -5,10 +5,9 @@
 #include "PgmWriter.h"
 
 PgmWriter::PgmWriter(const int W, const int H, const unsigned int depth,
-                     char const *outputFile) : width(W), height(H), depth(depth),
+                     std::string outputFile) : width(W), height(H), depth(depth),
                                                outputFileName(outputFile), pgm(nullptr), counter(0)
 {
-    outputFileFullName = new char[1024];
     advanceSeries();
 }
 
@@ -53,8 +52,8 @@ void PgmWriter::advanceSeries()
         std::fclose(pgm);
         ++counter; // If we just initialized the class, there is no need to increment counter!
     }
-    sprintf(outputFileFullName, "%s_%d.pgm", outputFileName, counter);
-    pgm = std::fopen(outputFileFullName, "wb");
+    outputFileFullName = outputFileName + "_" + std::to_string(counter) + ".pgm";
+    pgm = std::fopen(outputFileFullName.data(), "wb");
     
 }
 
@@ -66,5 +65,10 @@ PgmWriter::~PgmWriter()
 unsigned int PgmWriter::getCounter()
 {
     return counter;
+}
+
+const char * PgmWriter::getOutputFileFullNameCstring()
+{
+    return outputFileFullName.data();
 }
 

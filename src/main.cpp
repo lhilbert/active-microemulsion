@@ -4,6 +4,7 @@
 #include "Microemulsion.h"
 #include "PgmWriter.h"
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 
 namespace opt = boost::program_options;
 
@@ -47,8 +48,14 @@ int main(int argc, const char **argv)
     double dt = 1.0 / (double)(swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
     double dtOut = endTime/numVisualizationOutputs; // The dt used for visualization output. //todo read this from config
     
+    // If output folder doesn't exist, create it
+    if (!boost::filesystem::exists(outputDir))
+    {
+        boost::filesystem::create_directory(outputDir);
+    }
     // Setup and start Logger
     Logger logger;
+    logger.setOutputFolder(outputDir.data());
     if (debugMode)
     {
         logger.setDebugLevel(DEBUG);
@@ -75,10 +82,11 @@ int main(int argc, const char **argv)
     
     // Initialize PgmWriter
     logger.logMsg(INFO, "Initializing PGM writer");
-    PgmWriter pgmWriter(columns, rows, 1, "test.pgm");
+    PgmWriter pgmWriter(columns, rows, 1, outputDir+"/microemulsion");
     pgmWriter.setData(grid.getData());
     // Write initial data to file
-    logger.logMsg(PRODUCTION, "Writing PGM file #%d", pgmWriter.getCounter());
+    logger.logMsg(PRODUCTION, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
+                  pgmWriter.getOutputFileFullNameCstring());
     pgmWriter.write();
     pgmWriter.advanceSeries();
     
@@ -101,7 +109,8 @@ int main(int argc, const char **argv)
                             "| swapsPerformed=%ld "
                             "| swapRatio=%f",
                             swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
-            logger.logMsg(PRODUCTION, "Writing PGM file #%d", pgmWriter.getCounter());
+            logger.logMsg(PRODUCTION, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
+                          pgmWriter.getOutputFileFullNameCstring());
             pgmWriter.write();
             pgmWriter.advanceSeries();
             // Advance output timer
@@ -117,7 +126,8 @@ int main(int argc, const char **argv)
                     "| swapsPerformed=%ld "
                     "| swapRatio=%f",
                     swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
-    logger.logMsg(PRODUCTION, "Writing PGM file #%d", pgmWriter.getCounter());
+    logger.logMsg(PRODUCTION, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
+                  pgmWriter.getOutputFileFullNameCstring());
     pgmWriter.write();
     
     //

@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -std=c++14 -O2 -Wall -pedantic -Werror -fopenmp
-LIBS = -l boost_program_options -lm
+LIBS = -lboost_program_options -lboost_system -lboost_filesystem -lm
 
 OBJ = src/main.o \
       src/Timing.o \

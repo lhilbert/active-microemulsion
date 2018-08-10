@@ -134,6 +134,6 @@ void Logger::closeLogFile()
 
 Logger::~Logger()
 {
-    logMsg(getDebugLevel(), "Shutting down logging service.");
+    logMsg(getDebugLevel(), "Closing logger.");
     closeLogFile();
 }
