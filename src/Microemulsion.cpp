@@ -9,7 +9,7 @@ Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger)
         : grid(grid), logger(logger), omega(omega),
           uniformProbabilityDistribution(0.0, 1.0)
 {
-    deltaEmin = 10 * omega;
+    deltaEmin = -10 * omega;
     randomGenerator.seed(std::random_device()());
 }
 
