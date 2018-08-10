@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -std=c++14 -O2 -Wall -pedantic -Werror -fopenmp
-LIBS = -lm
+LIBS = -l boost_program_options -lm
 
 OBJ = src/main.o \
       src/Timing.o \
@@ -24,4 +24,4 @@ src/Microemulsion.o     : src/Microemulsion.h src/Grid.h src/Logger.h
 src/PgmWriter.o         : src/PgmWriter.h
 src/Timing.o            : src/Timing.h
 
-src/main.o              : src/Logger.h src/Grid.h src/Microemulsion.h src/PgmWriter.h lib/argparse/argparse.hpp
+src/main.o              : src/Logger.h src/Grid.h src/Microemulsion.h src/PgmWriter.h

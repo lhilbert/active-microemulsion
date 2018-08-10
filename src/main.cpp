@@ -1,37 +1,62 @@
 #include <iostream>
-#include "../lib/argparse/argparse.hpp"
 #include "Logger.h"
 #include "Grid.h"
 #include "Microemulsion.h"
 #include "PgmWriter.h"
+#include <boost/program_options.hpp>
+
+namespace opt = boost::program_options;
 
 int main(int argc, const char **argv)
 {
-    // Command-line argument parser. We use the argparse library (https://github.com/hbristow/argparse).
-    ArgumentParser argparser;
+    std::string outputDir, inputImage;
+    double endTime;
+    
+    // Command-line argument parser. We use Boost Program Options (https://www.boost.org/doc/libs/1_68_0/doc/html/program_options.html).
+    opt::options_description argsDescription("Supported options");
     // Here below some arguments, to be completed.
-    argparser.addArgument("--debug");
-    argparser.addArgument("-o", "--output-dir", 1);
-    argparser.addArgument("-i", "--input-image", 1);
-    argparser.addArgument("-T", "--end-time", 1);
+    argsDescription.add_options()
+        ("help,h", "Show this help and exit")
+        ("debug,d", "Enable the debug logging level")
+        ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
+        ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
+                "Specify the folder to use for output (log and data)")
+        ("input-image,i", opt::value<std::string>(&inputImage),
+                "Specify the image to be used as initial value for grid configuration")
+        ("end-time,T", opt::value<double>(&endTime)->default_value(1e3), "End time for the simulation")
+    ;
+    opt::variables_map varsMap;
+    opt::store(opt::parse_command_line(argc, argv, argsDescription), varsMap);
+    opt::notify(varsMap);
     
-    argparser.parse(static_cast<size_t>(argc), argv);
+    if (varsMap.count("help"))
+    {
+        std::cout << argsDescription << std::endl;
+        return 1;
+    }
     
-//    bool debugMode = argparser.exists("debug");
-    int rows = 200, columns = 200; //todo: then read these from configuration
+    bool debugMode = varsMap.count("debug")>0;
+    bool quietMode = varsMap.count("quiet")>0;
+    int rows = 50, columns = 50; //todo: then read these from configuration
 //    int endTime = argparser.retrieve<int>("end-time");
-    double endTime = 1e3;
-    double dt = 1e-5; // The dt used for timestepping. //todo read this from config
-    double dtOut = 10; // The dt used for visualization output. //todo read this from config
-    double omega = 0.3; //todo read this from config
+    int swapsPerPixelPerUnitTime = 80; //todo read this from config
+    int numVisualizationOutputs = 100; //todo read this from config
+    double omega = 0.5; //todo read this from config
+    //
+    int numInnerCells = rows * columns;
+    double dt = 1.0 / (double)(swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
+    double dtOut = endTime/numVisualizationOutputs; // The dt used for visualization output. //todo read this from config
     
     // Setup and start Logger
     Logger logger;
-//    if (debugMode)
-//    {
-//        logger.setDebugLevel(DEBUG);
-//    }
-//    logger.setDebugLevel(DEBUG);
+    if (debugMode)
+    {
+        logger.setDebugLevel(DEBUG);
+    }
+    else if (quietMode)
+    {
+        logger.setDebugLevel(PRODUCTION);
+    }
     logger.openLogFile();
     logger.setStartTime();
     logger.logMsg(logger.getDebugLevel(), "Debug level set to %s", logger.getDebugLevelStr());
@@ -72,10 +97,10 @@ int main(int argc, const char **argv)
         {
             // Writing this step to file
             logger.logEvent(PRODUCTION, t,
-                    "Simulation summary: swapAttemps=%ld "
-                    "| swapsPerformed=%ld "
-                    "| swapRatio=%f",
-                    swapAttempts, swapsPerformed, (double)swapsPerformed/swapAttempts);
+                            "Simulation summary: swapAttemps=%ld "
+                            "| swapsPerformed=%ld "
+                            "| swapRatio=%f",
+                            swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
             logger.logMsg(PRODUCTION, "Writing PGM file #%d", pgmWriter.getCounter());
             pgmWriter.write();
             pgmWriter.advanceSeries();
@@ -91,7 +116,7 @@ int main(int argc, const char **argv)
                     "Simulation summary: swapAttemps=%ld "
                     "| swapsPerformed=%ld "
                     "| swapRatio=%f",
-                    swapAttempts, swapsPerformed, (double)swapsPerformed/swapAttempts);
+                    swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
     logger.logMsg(PRODUCTION, "Writing PGM file #%d", pgmWriter.getCounter());
     pgmWriter.write();
     
