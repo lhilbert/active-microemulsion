@@ -1,3 +1,6 @@
+# Ignore all the output folders
+Out*
+
 # Ignore all the files generated in the build process
 *.o
 active-microemulsion
