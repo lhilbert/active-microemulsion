@@ -65,6 +65,13 @@ public:
         return static_cast<SpeciesBit>((data[row][column].chemicalSpecies >> SPECIES_BIT) & 1);
     }
     
+    // This is used to check if a swap is meaningless, however this must not include a chain check!
+    inline bool areCellsChemicallyIndistinguishable(int column, int row,
+                                                    int nColumn, int nRow)
+    {
+        return data[row][column].chemicalSpecies == data[nRow][nColumn].chemicalSpecies;
+    }
+    
     void setSpecies(int column, int row, SpeciesBit species);
     
     // Set chain properties in the first slot available and return the index of the slot used

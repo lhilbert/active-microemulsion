@@ -49,7 +49,7 @@ private:
         return (uniformProbabilityDistribution(randomGenerator) < probability);
     }
     
-    bool isSwapAllowedByChains(int x, int y, int nx, int ny);
+    bool isSwapAllowedByChainsAndMeaningful(int x, int y, int nx, int ny);
     
     bool isDiagonalSwapAllowedByChains(int x, int y, int nx, int ny, std::vector<std::reference_wrapper<ChainProperties>> &chains,
                                        std::vector<std::reference_wrapper<ChainProperties>> &nChains, int dx,

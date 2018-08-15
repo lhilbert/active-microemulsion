@@ -13,7 +13,7 @@ int main(int argc, const char **argv)
     std::string outputDir, inputImage;
     double endTime;
     int rows = 50, columns = 50; //todo: then read these from config
-    int swapsPerPixelPerUnitTime = 80; //todo read this from config
+    int swapsPerPixelPerUnitTime = 500; //todo read this from config
     int numVisualizationOutputs = 100; //todo read this from config
     double omega = 0.5; //todo read this from config
     
@@ -32,7 +32,8 @@ int main(int argc, const char **argv)
         ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
         ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
         ("omega,w", opt::value<double>(&omega)->default_value(0.5), "Energy cost for contiguity of non-affine species (omega model parameter)")
-    ;
+        ("sppps,s", opt::value<int>(&swapsPerPixelPerUnitTime)->default_value(333), "Number of average swap attempts per pixel per second")
+        ;
     opt::variables_map varsMap;
     opt::store(opt::parse_command_line(argc, argv, argsDescription), varsMap);
     opt::notify(varsMap);
@@ -83,7 +84,9 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numVisualizationOutputs));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(omega));
     
-    
+    logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dt));
+    logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtOut));
+
     // Config-file parser
     //logger.logMsg(PRODUCTION, "Reading configuration");
     //todo

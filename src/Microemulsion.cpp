@@ -21,7 +21,7 @@ bool Microemulsion::performRandomSwap()
     grid.pickRandomNeighbourOf(x, y, nx, ny);
     
     //Here we check if swap allowed by chains, if not we just return.
-    if (!isSwapAllowedByChains(x, y, nx, ny))
+    if (!isSwapAllowedByChainsAndMeaningful(x, y, nx, ny))
     {
         logger.logMsg(DEBUG, "Microemulsion::performRandomSwap - Swap not allowed by chains! "
                              "(x=%d, y=%d) <-> (nx=%d, ny=%d)", x, y, nx, ny);
@@ -139,15 +139,20 @@ double Microemulsion::computeSwappedPartialDifferentialEnergy(int x, int y, int 
     return energy;
 }
 
-bool Microemulsion::isSwapAllowedByChains(int x, int y, int nx, int ny)
+bool Microemulsion::isSwapAllowedByChainsAndMeaningful(int x, int y, int nx, int ny)
 {
     // Get chains of current cell and of swap candidate
     std::vector<std::reference_wrapper<ChainProperties>> chains = grid.chainsCellBelongsTo(x, y);
     std::vector<std::reference_wrapper<ChainProperties>> nChains = grid.chainsCellBelongsTo(nx, ny);
     // If neither of the cells belong to any chain, we can stop here and allow the swap.
+    // HOWEVER if the cells share the same chemical properties and they don't belong
+    // to chains, they are indistinguishable, so it's useless to actually swap them. In
+    // this case we reject the swap anyway! //todo: to be checked (see below)
     if (chains.empty() && nChains.empty())
     {
-        return true;
+        // If chemically indistinguishable, swap is meaningless. So we must return false.
+        // todo: Check in a rigorous way if this actually ensures a speedup in the avg case.
+        return !grid.areCellsChemicallyIndistinguishable(x, y, nx, ny);
     }
     // We also exclude any swap between chain neighbours, as it would break chain ordering.
     if (grid.isCellNeighbourInAnyChain(nx, ny, chains))
