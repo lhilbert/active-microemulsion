@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <cstdio>
+#include "CellData.h"
 
 class PgmWriter
 {
@@ -14,7 +15,7 @@ public:
     const int width, height;
     const unsigned int depth;
     std::string outputFileName;
-    const unsigned int **data;
+    const CellData **data;
 private:
     std::FILE *pgm;
     unsigned int counter;
@@ -25,7 +26,7 @@ public:
             std::string outputFile);
     ~PgmWriter();
     // Data pointer should usually be done just once.
-    void setData(const unsigned int **newData);
+    void setData(const CellData **newData);
     // Write data to pgm file
     void write();
     // Series should be advanced after write, if necessary

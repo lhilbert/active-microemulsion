@@ -12,6 +12,10 @@ int main(int argc, const char **argv)
 {
     std::string outputDir, inputImage;
     double endTime;
+    int rows = 50, columns = 50; //todo: then read these from config
+    int swapsPerPixelPerUnitTime = 80; //todo read this from config
+    int numVisualizationOutputs = 100; //todo read this from config
+    double omega = 0.5; //todo read this from config
     
     // Command-line argument parser. We use Boost Program Options (https://www.boost.org/doc/libs/1_68_0/doc/html/program_options.html).
     opt::options_description argsDescription("Supported options");
@@ -22,9 +26,12 @@ int main(int argc, const char **argv)
         ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
         ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
                 "Specify the folder to use for output (log and data)")
-        ("input-image,i", opt::value<std::string>(&inputImage),
+        ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
                 "Specify the image to be used as initial value for grid configuration")
         ("end-time,T", opt::value<double>(&endTime)->default_value(1e3), "End time for the simulation")
+        ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
+        ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
+        ("omega,w", opt::value<double>(&omega)->default_value(0.5), "Energy cost for contiguity of non-affine species (omega model parameter)")
     ;
     opt::variables_map varsMap;
     opt::store(opt::parse_command_line(argc, argv, argsDescription), varsMap);
@@ -38,11 +45,7 @@ int main(int argc, const char **argv)
     
     bool debugMode = varsMap.count("debug")>0;
     bool quietMode = varsMap.count("quiet")>0;
-    int rows = 50, columns = 50; //todo: then read these from configuration
 //    int endTime = argparser.retrieve<int>("end-time");
-    int swapsPerPixelPerUnitTime = 80; //todo read this from config
-    int numVisualizationOutputs = 100; //todo read this from config
-    double omega = 0.5; //todo read this from config
     //
     int numInnerCells = rows * columns;
     double dt = 1.0 / (double)(swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
@@ -66,18 +69,36 @@ int main(int argc, const char **argv)
     }
     logger.openLogFile();
     logger.setStartTime();
-    logger.logMsg(logger.getDebugLevel(), "Debug level set to %s", logger.getDebugLevelStr());
+    logger.logArgv(argc, argv); // Logging invocation command.
+    // Logging parameters for this run
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: Debug level set to %s", logger.getDebugLevelStr());
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(debugMode));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(quietMode));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(outputDir.data()));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(inputImage.data()));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%.2e", DUMP(endTime));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(rows));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(columns));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(swapsPerPixelPerUnitTime));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numVisualizationOutputs));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(omega));
+    
     
     // Config-file parser
     //logger.logMsg(PRODUCTION, "Reading configuration");
     //todo
     
     // Initialize data structures
-    logger.logMsg(INFO, "Initializing grid");
-    Grid grid(columns, rows);
-    int numRandomCells = grid.initializeGridRandomly(0.3);
-    logger.logMsg(INFO, "GRID: numRandomCells=%d", numRandomCells);
-    logger.logMsg(INFO, "Initializing microemulsion");
+    Grid grid(columns, rows, logger);
+//    int numSpeciesBCells = grid.initializeGridRandomly(0.3);
+//    int numSpeciesBCells = grid.initializeGridWithSingleChain();
+//    int numSpeciesBCells = grid.initializeGridWithTwoParallelChains(5);
+//    int numSpeciesBCells = grid.initializeGridWithTwoParallelChains(10);
+    int numSpeciesBCells = grid.initializeGridWithTwoOrthogonalChains(0,0);
+    int numSpeciesACells = (rows * columns) - numSpeciesBCells;
+    double speciesRatio = static_cast<double>(numSpeciesBCells) / numSpeciesACells;
+    logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f", DUMP(numSpeciesACells), DUMP(numSpeciesBCells), DUMP(speciesRatio));
+    logger.logMsg(PRODUCTION, "Initializing microemulsion");
     Microemulsion microemulsion(grid, omega, logger);
     
     // Initialize PgmWriter

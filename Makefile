@@ -18,10 +18,10 @@ all:  $(OBJ)
 clean:
 	rm $(OBJ)
 
-src/Grid.o              : src/Grid.h
+src/Grid.o              : src/Grid.h src/CellData.h
 src/Logger.o            : src/Logger.h src/Timing.h
 src/Microemulsion.o     : src/Microemulsion.h src/Grid.h src/Logger.h
-src/PgmWriter.o         : src/PgmWriter.h
+src/PgmWriter.o         : src/PgmWriter.h src/CellData.h
 src/Timing.o            : src/Timing.h
 
 src/main.o              : src/Logger.h src/Grid.h src/Microemulsion.h src/PgmWriter.h

@@ -76,10 +76,12 @@ void Logger::logRawString(char const *fmt, ...)
     va_start(args,fmt);
     printf("[%06.3f] ", timestamp);
     vprintf(fmt, args);
+    printf("\n");
     va_end(args);
     va_start(args,fmt);
     fprintf(LOG_FILE, "[%06.3f] ", timestamp);
     vfprintf(LOG_FILE, fmt, args);
+    fprintf(LOG_FILE, "\n");
     va_end(args);
 }
 
@@ -137,3 +139,45 @@ Logger::~Logger()
     logMsg(getDebugLevel(), "Closing logger.");
     closeLogFile();
 }
+
+void Logger::flush()
+{
+    std::fflush(stdout);
+    std::fflush(LOG_FILE);
+}
+
+void Logger::logArgv(const int argc, const char **argv)
+{
+    std::string cmdline("Invocation cmd: ");
+    for (int i = 0; i < argc - 1; ++i)
+    {
+        cmdline += argv[i];
+        cmdline += " ";
+    }
+    cmdline += argv[argc - 1];
+    logRawString(cmdline.data());
+}
+
+// todo: find some way to log variables nicely
+//void Logger::logVars(DebugLevel eventDebugLevel, char const * fmt, ...)
+//{
+//    // Newline at the end of the message is included.
+//    // If this trace is too low level for current debug level, skip it.
+//    if (eventDebugLevel < DEBUG_LEVEL)
+//        return;
+//    //
+//    double timestamp = Timing::getTimeSpentSeconds(LOGGER_START_TIME, Timing::getCurrentTimeMillis());
+//    va_list args;
+//    va_start(args,fmt);
+//    printf("[%06.3f] %s ", timestamp, DEBUG_STR[eventDebugLevel]);
+//    printf("---> ");
+//    vprintf(fmt, args);
+//    printf("\n");
+//    va_end(args);
+//    va_start(args,fmt);
+//    fprintf(LOG_FILE, "[%06.3f] %s ", timestamp, DEBUG_STR[eventDebugLevel]);
+//    fprintf(LOG_FILE, "---> ");
+//    vfprintf(LOG_FILE, fmt, args);
+//    fprintf(LOG_FILE, "\n");
+//    va_end(args);
+//}

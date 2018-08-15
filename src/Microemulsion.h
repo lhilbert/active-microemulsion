@@ -8,6 +8,7 @@
 #include "Grid.h"
 #include "Logger.h"
 #include <cmath>
+#include <functional>
 
 class Microemulsion
 {
@@ -47,6 +48,27 @@ private:
     {
         return (uniformProbabilityDistribution(randomGenerator) < probability);
     }
+    
+    bool isSwapAllowedByChains(int x, int y, int nx, int ny);
+    
+    bool isDiagonalSwapAllowedByChains(int x, int y, int nx, int ny, std::vector<std::reference_wrapper<ChainProperties>> &chains,
+                                       std::vector<std::reference_wrapper<ChainProperties>> &nChains, int dx,
+                                       int dy);
+    
+    bool isHorizontalSwapAllowedByChains(int x, int y, int nx, int ny, std::vector<std::reference_wrapper<ChainProperties>> &chains,
+                                         std::vector<std::reference_wrapper<ChainProperties>> &nChains, int dx);
+    
+    bool isVerticalSwapAllowedByChains(int x, int y, int nx, int ny, std::vector<std::reference_wrapper<ChainProperties>> &chains,
+                                         std::vector<std::reference_wrapper<ChainProperties>> &nChains, int dy);
+    
+    bool isSwapAllowedByChainNeighboursInDiagonalCase(int x, int y, int dx, int dy,
+                                                      ChainProperties &chainProperties);
+    
+    bool isSwapAllowedByChainNeighboursInHorizontalCase(int x, int y, int dx,
+                                                      ChainProperties &chainProperties);
+    
+    bool isSwapAllowedByChainNeighboursInVerticalCase(int x, int y, int dy,
+                                                      ChainProperties &chainProperties);
 };
 
 

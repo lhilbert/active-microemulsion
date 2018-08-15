@@ -8,5 +8,5 @@ add_executable(active_microemulsion
         src/main.cpp
         src/Timing.cpp src/Timing.h
         src/Logger.cpp src/Logger.h
-        src/Grid.cpp src/Grid.h src/PgmWriter.cpp src/PgmWriter.h src/Microemulsion.cpp src/Microemulsion.h)
+        src/Grid.cpp src/Grid.h src/PgmWriter.cpp src/PgmWriter.h src/Microemulsion.cpp src/Microemulsion.h src/CellData.h)
 target_link_libraries(active_microemulsion boost_program_options boost_system boost_filesystem m)

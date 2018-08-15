@@ -20,6 +20,9 @@
 #define GENERATE_ENUM(ENUM) ENUM,
 #define GENERATE_STRING(STRING) #STRING,
 
+#define DUMP(var) #var, (var)
+#define LOGVARTERM "LOGVARTERM"
+
 typedef enum DebugLevel
 {
     FOREACH_DEBUG(GENERATE_ENUM)
@@ -48,6 +51,9 @@ public:
     void logRawString(char const *fmt, ...);
     void logEvent(DebugLevel eventDebugLevel, double t, char const *fmt, ...);
     void logMsg(DebugLevel eventDebugLevel, char const *fmt, ...);
+    void logArgv(int argc, const char **argv);
+//    void logVars(DebugLevel eventDebugLevel, char const * fmt, ...);
+    void flush();
     void closeLogFile();
 };
 
