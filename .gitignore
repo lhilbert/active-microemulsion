@@ -1,5 +1,6 @@
 # Ignore all the output folders
 Out*
+ExperimentsOut*
 
 # Ignore all the files generated in the build process
 *.o
