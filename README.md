@@ -25,7 +25,7 @@ Basic usage:
 ```
 Getting the help:
 ```
-./active-microemulsion --help                                                                                                                                                 [c344dc3]
+./active-microemulsion --help                                                   [0eaaa82]
 Supported options:
   -h [ --help ]                    Show this help and exit
   -d [ --debug ]                   Enable the debug logging level
@@ -36,4 +36,10 @@ Supported options:
   -i [ --input-image ] arg         Specify the image to be used as initial 
                                    value for grid configuration
   -T [ --end-time ] arg (=1000)    End time for the simulation
+  -W [ --width ] arg (=50)         Width of the simulation grid
+  -H [ --height ] arg (=50)        Height of the simulation grid
+  -w [ --omega ] arg (=0.5)        Energy cost for contiguity of non-affine 
+                                   species (omega model parameter)
+  -s [ --sppps ] arg (=333)        Number of average swap attempts per pixel 
+                                   per second
 ```
