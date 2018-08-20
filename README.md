@@ -10,8 +10,10 @@ On **Ubuntu** these can easily be installed via the official repositories using 
 2. Or by installing the entire `libboost-all-dev` metapackage.
 
 On **macOS** (Sierra Version 10.12.6) we installed the follwing libraries using Homebrew:
+```
 brew install gcc
 brew install boost
+```
 
 The `experiments.sh` script depends on the *ImageMagick* suite for producing figures, specifically on the `convert` and `montage` commands.
 These can be obtained on Ubuntu from the official repositories by installing the `imagemagick` package.
@@ -29,7 +31,7 @@ Basic usage:
 ```
 Getting the help:
 ```
-./active-microemulsion --help                                                   [0eaaa82]
+./active-microemulsion --help
 Supported options:
   -h [ --help ]                    Show this help and exit
   -d [ --debug ]                   Enable the debug logging level
