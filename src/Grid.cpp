@@ -31,7 +31,8 @@ Grid::Grid(int columns, int rows, Logger &logger) : columns(columns),
                                     columnDistribution(1, columns),
                                     rowOffsetDistribution(-1, 1),
                                     columnOffsetDistribution(-1, 1),
-                                    logger(logger)
+                                    logger(logger),
+                                    nextAvailableChainId(1)
 {
     rowGenerator.seed(std::random_device()());
     columnGenerator.seed(std::random_device()());
@@ -108,12 +109,13 @@ int Grid::initializeGridWithSingleChain()
     logger.logMsg(PRODUCTION, "Initializing grid with single horizontal chain");
     
     int chainCol = columns / 2;
+    unsigned short chainId = getNewChainId();
     for (int j = 1; j <= rows; ++j)
     {
         setSpecies(chainCol, j, SPECIES_B);
-        setChainProperties(chainCol, j, 1,
-                static_cast<unsigned int>(j - 1),
-                (unsigned int) rows);
+        setChainProperties(chainCol, j, chainId,
+                           static_cast<unsigned int>(j - 1),
+                           (unsigned int) rows);
     }
     return rows;
 }
@@ -123,14 +125,16 @@ int Grid::initializeGridWithTwoParallelChains(int distance)
     logger.logMsg(PRODUCTION, "Initializing grid with two parallel chains: %s=%d", DUMP(distance));
     
     int chainCol = (columns + distance) / 2;
+    unsigned short chainId1 = getNewChainId();
+    unsigned short chainId2 = getNewChainId();
     for (int j = 1; j <= rows; ++j)
     {
         setSpecies(chainCol, j, SPECIES_B);
-        setChainProperties(chainCol, j, 1,
+        setChainProperties(chainCol, j, chainId1,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
         setSpecies(chainCol - distance, j, SPECIES_B);
-        setChainProperties(chainCol - distance, j, 2,
+        setChainProperties(chainCol - distance, j, chainId2,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
     }
@@ -143,19 +147,20 @@ int Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset)
     
     int chainCol = (columns / 2) + xOffset;
     int chainRow = (rows / 2) + yOffset;
-    
+    unsigned short chainId1 = getNewChainId();
     for (int j = 1; j <= rows; ++j)
     {
         setSpecies(chainCol, j, SPECIES_B);
-        setChainProperties(chainCol, j, 1,
+        setChainProperties(chainCol, j, chainId1,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
     }
     
+    unsigned short chainId2 = getNewChainId();
     for (int i = 1; i <= columns; ++i)
     {
         setSpecies(i, chainRow, SPECIES_B);
-        setChainProperties(i, chainRow, 2,
+        setChainProperties(i, chainRow, chainId2,
                            static_cast<unsigned int>(i - 1),
                            (unsigned int) columns);
     }
@@ -266,4 +271,10 @@ std::vector<std::reference_wrapper<ChainProperties>> Grid::chainsCellBelongsTo(i
         }
     }
     return chains;
+}
+
+unsigned short Grid::getNewChainId()
+{
+    logger.logMsg(PRODUCTION, "Initializing new chain with chainId=%d", nextAvailableChainId);
+    return nextAvailableChainId++; // Return and increment
 }

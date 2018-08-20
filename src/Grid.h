@@ -26,6 +26,7 @@ private:
     std::uniform_int_distribution<int> rowDistribution, columnDistribution,
             rowOffsetDistribution, columnOffsetDistribution;
     Logger &logger;
+    unsigned short nextAvailableChainId;
 
 public:
     Grid(int columns, int rows, Logger &logger);
@@ -113,6 +114,8 @@ private:
     inline int pickColumnOffset();
     
     inline bool isPositionInChainPropertiesArrayValid(unsigned char position);
+    
+    unsigned short getNewChainId();
 };
 
 

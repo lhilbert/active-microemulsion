@@ -9,7 +9,7 @@ Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger)
         : grid(grid), logger(logger), omega(omega),
           uniformProbabilityDistribution(0.0, 1.0)
 {
-    deltaEmin = -10 * omega;
+    deltaEmin = -10 * fabs(omega);
     randomGenerator.seed(std::random_device()());
 }
 
@@ -148,18 +148,23 @@ bool Microemulsion::isSwapAllowedByChainsAndMeaningful(int x, int y, int nx, int
     // HOWEVER if the cells share the same chemical properties and they don't belong
     // to chains, they are indistinguishable, so it's useless to actually swap them. In
     // this case we reject the swap anyway! //todo: to be checked (see below)
+    
+    // Check if "meaningful".
     if (chains.empty() && nChains.empty())
     {
         // If chemically indistinguishable, swap is meaningless. So we must return false.
         // todo: Check in a rigorous way if this actually ensures a speedup in the avg case.
         return !grid.areCellsChemicallyIndistinguishable(x, y, nx, ny);
     }
-    // We also exclude any swap between chain neighbours, as it would break chain ordering.
+    
+    // We also exclude any swap between chain neighbours, as it would break chain ordering!
+    // todo: Here check if it is better to just check if the two cells share any chain (not just being neighbours)
     if (grid.isCellNeighbourInAnyChain(nx, ny, chains))
     {
         return false;
     }
     
+    // Check if allowed, i.e. if not breaking the chain.
     bool isSwapAllowed = false;
     int dx = nx - x, dy = ny - y;
     

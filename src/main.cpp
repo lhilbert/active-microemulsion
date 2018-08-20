@@ -93,11 +93,14 @@ int main(int argc, const char **argv)
     
     // Initialize data structures
     Grid grid(columns, rows, logger);
-//    int numSpeciesBCells = grid.initializeGridRandomly(0.3);
-//    int numSpeciesBCells = grid.initializeGridWithSingleChain();
-//    int numSpeciesBCells = grid.initializeGridWithTwoParallelChains(5);
-//    int numSpeciesBCells = grid.initializeGridWithTwoParallelChains(10);
-    int numSpeciesBCells = grid.initializeGridWithTwoOrthogonalChains(0,0);
+    int numSpeciesBCells = 0;
+//    numSpeciesBCells += grid.initializeGridRandomly(0.1);
+//    numSpeciesBCells += grid.initializeGridWithSingleChain();
+//    numSpeciesBCells += grid.initializeGridWithTwoParallelChains(5);
+//    numSpeciesBCells += grid.initializeGridWithTwoParallelChains(10);
+    numSpeciesBCells += grid.initializeGridWithTwoOrthogonalChains(0,0);
+//    numSpeciesBCells += grid.initializeGridWithTwoOrthogonalChains(-5,-5);
+//    numSpeciesBCells += grid.initializeGridWithTwoOrthogonalChains(+5,+5);
     int numSpeciesACells = (rows * columns) - numSpeciesBCells;
     double speciesRatio = static_cast<double>(numSpeciesBCells) / numSpeciesACells;
     logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f", DUMP(numSpeciesACells), DUMP(numSpeciesBCells), DUMP(speciesRatio));
@@ -121,27 +124,26 @@ int main(int argc, const char **argv)
     unsigned long swapsPerformed = 0;
     while (t < endTime)
     {
-        // Time-stepping loop, do something here
-        swapsPerformed += microemulsion.performRandomSwap();
-        ++swapAttempts;
-        
-        if (t >= lastOutputTime + dtOut)
+        // Time-stepping loop
+        while (t < lastOutputTime + dtOut)
         {
-            // Writing this step to file
-            logger.logEvent(PRODUCTION, t,
-                            "Simulation summary: swapAttemps=%ld "
-                            "| swapsPerformed=%ld "
-                            "| swapRatio=%f",
-                            swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
-            logger.logMsg(PRODUCTION, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
-                          pgmWriter.getOutputFileFullNameCstring());
-            pgmWriter.write();
-            pgmWriter.advanceSeries();
-            // Advance output timer
-            lastOutputTime += dtOut;
+            t += dt;
+            swapsPerformed += microemulsion.performRandomSwap();
+            ++swapAttempts;
         }
-        // Now finally advancing time
-        t += dt;
+    
+        // Writing this step to file
+        logger.logEvent(PRODUCTION, t,
+                        "Simulation summary: swapAttemps=%ld "
+                        "| swapsPerformed=%ld "
+                        "| swapRatio=%f",
+                        swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
+        logger.logMsg(PRODUCTION, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
+                      pgmWriter.getOutputFileFullNameCstring());
+        pgmWriter.write();
+        pgmWriter.advanceSeries();
+        // Advance output timer
+        lastOutputTime += dtOut;
     }
     
     // Final output
