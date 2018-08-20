@@ -31,10 +31,10 @@ if [[ "${1}" == "--no-sim" ]]; then
     SIMULATE="false"
 fi
 
-function execute { # Print and execute the input command in a subshell (and return output)
+function execute { # Log and execute the input command
     CMD="$@"
     echo ${CMD}
-    echo $(${CMD})
+    ${CMD}
 }
 
 function expandParams { # Receiving a list of variable names to expand
