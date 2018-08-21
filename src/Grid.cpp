@@ -90,21 +90,41 @@ void Grid::pickRandomNeighbourOf(int i, int j, int &neighbourI, int &neighbourJ)
             );
 }
 
-int Grid::initializeGridRandomly(double randomRatio)
+int Grid::initializeInnerGridAs(ChemicalSpecies chemicalSpecies, Activity activity)
+{
+    for (int j = getFirstRow(); j <= getLastRow(); ++j)
+    {
+        for (int i = getFirstColumn(); i <= getLastColumn(); ++i)
+        {
+            setChemicalProperties(i, j, chemicalSpecies, activity);
+        }
+    }
+    return columns*rows;
+}
+
+int Grid::initializeGridRandomly(double randomRatio, ChemicalSpecies chemicalSpecies, Activity activity)
 {
     logger.logMsg(PRODUCTION, "Initializing grid randomly: %s=%f", DUMP(randomRatio));
     
     int numRandomCells = static_cast<int>(round(columns * rows * randomRatio));
-    for (int i = 0; i < numRandomCells; ++i)
+    int i = 0;
+    int safetyCounter = 0;
+    int maxIter = 5 * columns * rows;
+    while (i < numRandomCells && safetyCounter < maxIter)
     {
         int x = 0, y = 0;
         pickRandomElement(x, y);
-        setSpecies(x, y, SPECIES_B);
+        if (chainsCellBelongsTo(x, y).empty())
+        {
+            setChemicalProperties(x, y, chemicalSpecies, activity);
+            ++i;
+        }
+        ++safetyCounter;
     }
-    return numRandomCells;
+    return i;
 }
 
-int Grid::initializeGridWithSingleChain()
+int Grid::initializeGridWithSingleChain(ChemicalSpecies chemicalSpecies, Activity activity)
 {
     logger.logMsg(PRODUCTION, "Initializing grid with single horizontal chain");
     
@@ -112,7 +132,7 @@ int Grid::initializeGridWithSingleChain()
     unsigned short chainId = getNewChainId();
     for (int j = 1; j <= rows; ++j)
     {
-        setSpecies(chainCol, j, SPECIES_B);
+        setChemicalProperties(chainCol, j, chemicalSpecies, activity);
         setChainProperties(chainCol, j, chainId,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
@@ -120,7 +140,7 @@ int Grid::initializeGridWithSingleChain()
     return rows;
 }
 
-int Grid::initializeGridWithTwoParallelChains(int distance)
+int Grid::initializeGridWithTwoParallelChains(int distance, ChemicalSpecies chemicalSpecies, Activity activity)
 {
     logger.logMsg(PRODUCTION, "Initializing grid with two parallel chains: %s=%d", DUMP(distance));
     
@@ -129,11 +149,11 @@ int Grid::initializeGridWithTwoParallelChains(int distance)
     unsigned short chainId2 = getNewChainId();
     for (int j = 1; j <= rows; ++j)
     {
-        setSpecies(chainCol, j, SPECIES_B);
+        setChemicalProperties(chainCol, j, chemicalSpecies, activity);
         setChainProperties(chainCol, j, chainId1,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
-        setSpecies(chainCol - distance, j, SPECIES_B);
+        setChemicalProperties(chainCol - distance, j, chemicalSpecies, activity);
         setChainProperties(chainCol - distance, j, chainId2,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
@@ -141,7 +161,7 @@ int Grid::initializeGridWithTwoParallelChains(int distance)
     return 2*rows;
 }
 
-int Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset)
+int Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset, ChemicalSpecies chemicalSpecies, Activity activity)
 {
     logger.logMsg(PRODUCTION, "Initializing grid with two orthogonal chains: %s=%d, %s=%d", DUMP(xOffset), DUMP(yOffset));
     
@@ -150,7 +170,7 @@ int Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset)
     unsigned short chainId1 = getNewChainId();
     for (int j = 1; j <= rows; ++j)
     {
-        setSpecies(chainCol, j, SPECIES_B);
+        setChemicalProperties(chainCol, j, chemicalSpecies, activity);
         setChainProperties(chainCol, j, chainId1,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
@@ -159,7 +179,7 @@ int Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset)
     unsigned short chainId2 = getNewChainId();
     for (int i = 1; i <= columns; ++i)
     {
-        setSpecies(i, chainRow, SPECIES_B);
+        setChemicalProperties(i, chainRow, chemicalSpecies, activity);
         setChainProperties(i, chainRow, chainId2,
                            static_cast<unsigned int>(i - 1),
                            (unsigned int) columns);
@@ -168,14 +188,44 @@ int Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset)
     return rows + columns;
 }
 
-void Grid::setSpecies(int column, int row, SpeciesBit species)
+void Grid::setChemicalSpecies(int column, int row, ChemicalSpecies species)
 {
-    // Set the SPECIES_BIT to the species value
-    data[row][column].chemicalSpecies ^=
-            (-species ^ data[row][column].chemicalSpecies) & (1U << SPECIES_BIT);
+    setBit(getElement(column, row).chemicalProperties, SPECIES_BIT, species);
+}
+
+void Grid::setActivity(int column, int row, Activity activity)
+{
+    setBit(getElement(column, row).chemicalProperties, ACTIVE_BIT, activity);
+}
+
+void Grid::setChemicalProperties(int column, int row, ChemicalSpecies species, Activity activity)
+{
+    setBit(getElement(column, row).chemicalProperties, SPECIES_BIT, species);
+    setBit(getElement(column, row).chemicalProperties, ACTIVE_BIT, activity);
+}
+
+void Grid::setChemicalProperties(int column, int row, ChemicalProperties chemicalProperties)
+{
+    setChemicalProperties(column, row, static_cast<ChemicalSpecies>(getBit(chemicalProperties, SPECIES_BIT)),
+                          static_cast<Activity>(getBit(chemicalProperties, ACTIVE_BIT)));
+}
+
+void Grid::setFlags(int column, int row, Flags flags)
+{
+    getElement(column, row).flags = flags;
+}
+
+void Grid::setTranscribability(int column, int row, Transcribability transcribability)
+{
+    setBit(getElement(column, row).flags, TRANSCRIBABLE_BIT, transcribability);
 }
 
 CellData &Grid::getElement(int i, int j)
+{
+    return data[j][i];
+}
+
+CellData &Grid::getElement(int i, int j) const
 {
     return data[j][i];
 }
@@ -277,4 +327,17 @@ unsigned short Grid::getNewChainId()
 {
     logger.logMsg(PRODUCTION, "Initializing new chain with chainId=%d", nextAvailableChainId);
     return nextAvailableChainId++; // Return and increment
+}
+
+int Grid::getSpeciesCount(ChemicalSpecies chemicalSpecies)
+{
+    int counter = 0;
+    for (int j = getFirstRow(); j <= getLastRow(); ++j)
+    {
+        for (int i = getFirstColumn(); i <= getLastColumn(); ++i)
+        {
+            counter += (getChemicalSpecies(i, j) == chemicalSpecies);
+        }
+    }
+    return counter;
 }

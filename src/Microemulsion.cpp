@@ -154,7 +154,7 @@ bool Microemulsion::isSwapAllowedByChainsAndMeaningful(int x, int y, int nx, int
     {
         // If chemically indistinguishable, swap is meaningless. So we must return false.
         // todo: Check in a rigorous way if this actually ensures a speedup in the avg case.
-        return !grid.areCellsChemicallyIndistinguishable(x, y, nx, ny);
+        return !grid.areCellsIndistinguishable(x, y, nx, ny);
     }
     
     // We also exclude any swap between chain neighbours, as it would break chain ordering!
@@ -341,4 +341,49 @@ bool Microemulsion::isSwapAllowedByChainNeighboursInVerticalCase(int x, int y, i
         }
     }
     return isSwapAllowed;
+}
+
+unsigned int Microemulsion::performChemicalReactions()
+{
+    unsigned int chemicalChangesCounter = 0;
+    for (int i = grid.getFirstRow(); i <= grid.getLastRow(); ++i)
+    {
+        for (int j = grid.getFirstColumn(); j <= grid.getLastColumn(); ++j)
+        {
+            // Chemical reaction takes place on each cell of the grid.
+            chemicalChangesCounter += performChemicalReaction(i, j);
+        }
+    }
+    return 0;
+}
+
+bool Microemulsion::performChemicalReaction(int row, int column)
+{
+    bool isChemPropChanged = false;
+//    CellData& cellData = grid.getElement(column, row);
+//    char
+    return isChemPropChanged;
+}
+
+bool Microemulsion::doesPairRequireEnergyCost(int x, int y, int nx, int ny) const
+{
+    bool isEnergyCostRequired = false;
+    CellData &cellData = grid.getElement(x, y);
+    CellData &nCellData = grid.getElement(nx, ny);
+    if (Grid::isChromatine(cellData))
+    {
+        if (Grid::isActive(cellData))
+        {
+            isEnergyCostRequired = Grid::isChromatine(nCellData);
+        }
+        else
+        {
+            isEnergyCostRequired = Grid::isActive(nCellData);
+        }
+    }
+    else if (Grid::isRBP(cellData) && Grid::isActive(cellData))
+    {
+        isEnergyCostRequired = Grid::isChromatine(cellData) && !Grid::isActive(nCellData);
+    }
+    return isEnergyCostRequired;
 }

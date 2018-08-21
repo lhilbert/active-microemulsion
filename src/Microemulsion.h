@@ -22,11 +22,24 @@ private:
 public:
     Microemulsion(Grid &grid, double omega, Logger &logger);
     
-    // The random swap returns if it was performed
+    /**
+     * Attempts a random swap between two neighbouring cells on the grid.
+     * @return True if the swap was performed.
+     */
     bool performRandomSwap();
-    // The following attempts the given amount of swaps and returns how many
-    // actually done.
+    
+    /**
+     * Attempts the given amount of swaps and returns how many actually done.
+     * @param amount The number of swaps to attempt.
+     * @return The number of swaps successfully performed.
+     */
     unsigned int performRandomSwaps(unsigned int amount);
+    
+    /**
+     * Perform the chemical reactions on the entire grid.
+     * @return The total number of chemical changes.
+     */
+    unsigned int performChemicalReactions();
 
 private:
     double computePartialDifferentialEnergy(int x, int y, int nx, int ny);
@@ -36,8 +49,10 @@ private:
     inline double computePairEnergy(int x, int y, int nx, int ny)
     {
         // If the species is different, return omega
-        return omega * (grid.getSpecies(x, y) != grid.getSpecies(nx, ny));
+        return omega * doesPairRequireEnergyCost(x, y, nx, ny);
     }
+    
+    bool doesPairRequireEnergyCost(int x, int y, int nx, int ny) const;
     
     inline double computeSwapProbability(double deltaEnergy)
     {
@@ -69,6 +84,11 @@ private:
     
     bool isSwapAllowedByChainNeighboursInVerticalCase(int x, int y, int dy,
                                                       ChainProperties &chainProperties);
+    
+    // If reaction causes a change in chemical properties, return True.
+    bool performChemicalReaction(int row, int column);
+    
+    
 };
 
 

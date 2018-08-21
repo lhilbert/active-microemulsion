@@ -16,6 +16,8 @@ int main(int argc, const char **argv)
     int swapsPerPixelPerUnitTime = 500; //todo read this from config
     int numVisualizationOutputs = 100; //todo read this from config
     double omega = 0.5; //todo read this from config
+    double kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kMax;
+    std::set<double> kSet;
     
     // Command-line argument parser. We use Boost Program Options (https://www.boost.org/doc/libs/1_68_0/doc/html/program_options.html).
     opt::options_description argsDescription("Supported options");
@@ -33,6 +35,12 @@ int main(int argc, const char **argv)
         ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
         ("omega,w", opt::value<double>(&omega)->default_value(0.5), "Energy cost for contiguity of non-affine species (omega model parameter)")
         ("sppps,s", opt::value<int>(&swapsPerPixelPerUnitTime)->default_value(333), "Number of average swap attempts per pixel per second")
+        ("kOn", opt::value<double>(&kOn)->default_value(1.25e-3), "Reaction rate - Chromatin from non-transcribable to transcribable state")
+        ("kOff", opt::value<double>(&kOff)->default_value(2.5e-3), "Reaction rate - Chromatin from transcribable to non-transcribable state")
+        ("kChromPlus", opt::value<double>(&kChromPlus)->default_value(6.666666666e-3), "Reaction rate - Transcription turned ON")
+        ("kChromMinus", opt::value<double>(&kChromMinus)->default_value(1.666666666e-3), "Reaction rate - Transcription turned OFF")
+        ("kRnaPlus", opt::value<double>(&kRnaPlus)->default_value(8.333333333e-3), "Reaction rate - RBP from free to bound state")
+        ("kRnaMinus", opt::value<double>(&kRnaMinus)->default_value(8.333333333e-4), "Reaction rate - RBP from bound to free state")
         ;
     opt::variables_map varsMap;
     opt::store(opt::parse_command_line(argc, argv, argsDescription), varsMap);
@@ -50,6 +58,11 @@ int main(int argc, const char **argv)
     //
     int numInnerCells = rows * columns;
     double dt = 1.0 / (double)(swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
+    kSet.insert(kOn); kSet.insert(kOff);
+    kSet.insert(kChromPlus); kSet.insert(kChromMinus);
+    kSet.insert(kRnaPlus); kSet.insert(kRnaMinus);
+    kMax = *kSet.rbegin(); // Get the maximum on the set
+    double dtChem = 0.1 / kMax;
     double dtOut = endTime/numVisualizationOutputs; // The dt used for visualization output. //todo read this from config
     
     // If output folder doesn't exist, create it
@@ -83,8 +96,16 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(swapsPerPixelPerUnitTime));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numVisualizationOutputs));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(omega));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kOn));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kOff));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kChromPlus));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kChromMinus));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kRnaPlus));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kRnaMinus));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kMax));
     
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dt));
+    logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtChem));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtOut));
 
     // Config-file parser
@@ -93,17 +114,19 @@ int main(int argc, const char **argv)
     
     // Initialize data structures
     Grid grid(columns, rows, logger);
-    int numSpeciesBCells = 0;
-//    numSpeciesBCells += grid.initializeGridRandomly(0.1);
-//    numSpeciesBCells += grid.initializeGridWithSingleChain();
-//    numSpeciesBCells += grid.initializeGridWithTwoParallelChains(5);
-//    numSpeciesBCells += grid.initializeGridWithTwoParallelChains(10);
-    numSpeciesBCells += grid.initializeGridWithTwoOrthogonalChains(0,0);
-//    numSpeciesBCells += grid.initializeGridWithTwoOrthogonalChains(-5,-5);
-//    numSpeciesBCells += grid.initializeGridWithTwoOrthogonalChains(+5,+5);
-    int numSpeciesACells = (rows * columns) - numSpeciesBCells;
-    double speciesRatio = static_cast<double>(numSpeciesBCells) / numSpeciesACells;
-    logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f", DUMP(numSpeciesACells), DUMP(numSpeciesBCells), DUMP(speciesRatio));
+//    grid.initializeInnerGridAs(CHROMATINE, NOT_ACTIVE);
+//    grid.initializeGridRandomly(0.5, RBP, ACTIVE);
+    grid.initializeInnerGridAs(RBP, ACTIVE);
+//    grid.initializeGridWithSingleChain(RBP, ACTIVE);
+//    grid.initializeGridWithTwoParallelChains(5, RBP, ACTIVE);
+//    grid.initializeGridWithTwoParallelChains(10, RBP, ACTIVE);
+    grid.initializeGridWithTwoOrthogonalChains(0, 0, CHROMATINE, NOT_ACTIVE);
+//    grid.initializeGridWithTwoOrthogonalChains(-5, -5, RBP, ACTIVE);
+//    grid.initializeGridWithTwoOrthogonalChains(+5, +5, RBP, ACTIVE);
+    int numRbpCells = grid.getSpeciesCount(RBP);
+    int numChromatineCells = (rows * columns) - numRbpCells;
+    double speciesRatio = static_cast<double>(numRbpCells) / numChromatineCells;
+    logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f", DUMP(numChromatineCells), DUMP(numRbpCells), DUMP(speciesRatio));
     logger.logMsg(PRODUCTION, "Initializing microemulsion");
     Microemulsion microemulsion(grid, omega, logger);
     
@@ -111,17 +134,19 @@ int main(int argc, const char **argv)
     logger.logMsg(INFO, "Initializing PGM writer");
     PgmWriter pgmWriter(columns, rows, 1, outputDir+"/microemulsion");
     pgmWriter.setData(grid.getData());
-    // Write initial data to file
-    logger.logMsg(PRODUCTION, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
-                  pgmWriter.getOutputFileFullNameCstring());
-    pgmWriter.write();
-    pgmWriter.advanceSeries();
     
     // Simulation loops
     double t = 0;
+    // Write initial data to file
+    logger.logEvent(PRODUCTION, t, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
+                  pgmWriter.getOutputFileFullNameCstring());
+    pgmWriter.write();
+    pgmWriter.advanceSeries();
+    //
     double lastOutputTime = 0;
     unsigned long swapAttempts = 0;
     unsigned long swapsPerformed = 0;
+    logger.logEvent(INFO, t, "Entering main time-stepping loop");
     while (t < endTime)
     {
         // Time-stepping loop
@@ -138,23 +163,29 @@ int main(int argc, const char **argv)
                         "| swapsPerformed=%ld "
                         "| swapRatio=%f",
                         swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
-        logger.logMsg(PRODUCTION, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
+        logger.logEvent(PRODUCTION, t, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
                       pgmWriter.getOutputFileFullNameCstring());
         pgmWriter.write();
         pgmWriter.advanceSeries();
         // Advance output timer
         lastOutputTime += dtOut;
     }
-    
-    // Final output
-    logger.logEvent(PRODUCTION, t,
-                    "Simulation summary: swapAttemps=%ld "
-                    "| swapsPerformed=%ld "
-                    "| swapRatio=%f",
-                    swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
-    logger.logMsg(PRODUCTION, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
-                  pgmWriter.getOutputFileFullNameCstring());
-    pgmWriter.write();
+    logger.logEvent(DEBUG, t, "Exiting main time-stepping loop");
+//    logger.logEvent(DEBUG, t, "%s=%f", DUMP(lastOutputTime));
+
+//    Below should not be required. //todo: remove this part if really useless
+//    // Final output, but make sure we didn't just write in the last iteration!
+//    if (t > lastOutputTime)
+//    {
+//        logger.logEvent(PRODUCTION, t,
+//                        "Simulation summary: swapAttemps=%ld "
+//                        "| swapsPerformed=%ld "
+//                        "| swapRatio=%f",
+//                        swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
+//        logger.logEvent(PRODUCTION, t, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
+//                      pgmWriter.getOutputFileFullNameCstring());
+//        pgmWriter.write();
+//    }
     
     //
     return 0;

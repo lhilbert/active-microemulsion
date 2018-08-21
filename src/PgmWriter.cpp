@@ -31,7 +31,7 @@ void PgmWriter::write()
     {
         for (int i = 0; i <= 2 * width - 1; i += 2)
         {
-            int value = data[(i / 2) + 1][j].chemicalSpecies;
+            int value = data[(i / 2) + 1][j].chemicalProperties;
             char character = static_cast<char>(48 + value); // DANGER: this works only with single digit values!
             buffer[i] = character;
             buffer[i + 1] = ' ';
