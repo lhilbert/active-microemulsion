@@ -5,9 +5,23 @@
 #include "Microemulsion.h"
 #include <omp.h>
 
-Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger)
+Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger,
+                             double deltaTChem,
+                             double kOn,
+                             double kOff,
+                             double kChromPlus,
+                             double kChromMinus,
+                             double kRnaPlus,
+                             double kRnaMinus)
         : grid(grid), logger(logger), omega(omega),
-          uniformProbabilityDistribution(0.0, 1.0)
+          uniformProbabilityDistribution(0.0, 1.0),
+          dtChem(deltaTChem),
+          kOn(kOn),
+          kOff(kOff),
+          kChromPlus(kChromPlus),
+          kChromMinus(kChromMinus),
+          kRnaPlus(kRnaPlus),
+          kRnaMinus(kRnaMinus)
 {
     deltaEmin = -10 * fabs(omega);
     randomGenerator.seed(std::random_device()());
@@ -59,6 +73,30 @@ unsigned int Microemulsion::performRandomSwaps(unsigned int amount)
 //        performRandomSwap();
 //    }
     return 0U;
+}
+
+bool Microemulsion::doesPairRequireEnergyCost(int x, int y, int nx, int ny) const
+{
+    bool isEnergyCostRequired = false;
+    CellData &cellData = grid.getElement(x, y);
+    CellData &nCellData = grid.getElement(nx, ny);
+    // Here logic for pairs that require an omega energy cost
+    if (Grid::isChromatine(cellData))
+    {
+        if (Grid::isActive(cellData))
+        {
+            isEnergyCostRequired = Grid::isChromatine(nCellData);
+        }
+        else
+        {
+            isEnergyCostRequired = Grid::isActive(nCellData);
+        }
+    }
+    else if (Grid::isRBP(cellData) && Grid::isActive(cellData))
+    {
+        isEnergyCostRequired = Grid::isChromatine(cellData) && !Grid::isActive(nCellData);
+    }
+    return isEnergyCostRequired;
 }
 
 double Microemulsion::computePartialDifferentialEnergy(int x, int y, int nx, int ny)
@@ -360,30 +398,57 @@ unsigned int Microemulsion::performChemicalReactions()
 bool Microemulsion::performChemicalReaction(int row, int column)
 {
     bool isChemPropChanged = false;
-//    CellData& cellData = grid.getElement(column, row);
-//    char
+    CellData& cellData = grid.getElement(column, row);
+    if (Grid::isChromatine(cellData))
+    {
+        // Reaction for Chromatine
+        
+    }
+    else if (Grid::isRBP(cellData))
+    {
+        // Reaction for RBP
+    }
     return isChemPropChanged;
 }
 
-bool Microemulsion::doesPairRequireEnergyCost(int x, int y, int nx, int ny) const
+void Microemulsion::setDtChem(double dtChem)
 {
-    bool isEnergyCostRequired = false;
-    CellData &cellData = grid.getElement(x, y);
-    CellData &nCellData = grid.getElement(nx, ny);
-    if (Grid::isChromatine(cellData))
-    {
-        if (Grid::isActive(cellData))
-        {
-            isEnergyCostRequired = Grid::isChromatine(nCellData);
-        }
-        else
-        {
-            isEnergyCostRequired = Grid::isActive(nCellData);
-        }
-    }
-    else if (Grid::isRBP(cellData) && Grid::isActive(cellData))
-    {
-        isEnergyCostRequired = Grid::isChromatine(cellData) && !Grid::isActive(nCellData);
-    }
-    return isEnergyCostRequired;
+    logger.logMsg(PRODUCTION, "Microemulsion::setDtChem %s=%f", DUMP(dtChem));
+    Microemulsion::dtChem = dtChem;
+}
+
+void Microemulsion::setKOn(double kOn)
+{
+    logger.logMsg(PRODUCTION, "Microemulsion::setKOn %s=%f", DUMP(kOn));
+    Microemulsion::kOn = kOn;
+}
+
+void Microemulsion::setKOff(double kOff)
+{
+    logger.logMsg(PRODUCTION, "Microemulsion::setKOff %s=%f", DUMP(kOff));
+    Microemulsion::kOff = kOff;
+}
+
+void Microemulsion::setKChromPlus(double kChromPlus)
+{
+    logger.logMsg(PRODUCTION, "Microemulsion::setKChromPlus %s=%f", DUMP(kChromPlus));
+    Microemulsion::kChromPlus = kChromPlus;
+}
+
+void Microemulsion::setKChromMinus(double kChromMinus)
+{
+    logger.logMsg(PRODUCTION, "Microemulsion::setKChromMinus %s=%f", DUMP(kChromMinus));
+    Microemulsion::kChromMinus = kChromMinus;
+}
+
+void Microemulsion::setKRnaPlus(double kRnaPlus)
+{
+    logger.logMsg(PRODUCTION, "Microemulsion::setKRnaPlus %s=%f", DUMP(kRnaPlus));
+    Microemulsion::kRnaPlus = kRnaPlus;
+}
+
+void Microemulsion::setKRnaMinus(double kRnaMinus)
+{
+    logger.logMsg(PRODUCTION, "Microemulsion::setKRnaMinus %s=%f", DUMP(kRnaMinus));
+    Microemulsion::kRnaMinus = kRnaMinus;
 }

@@ -18,9 +18,31 @@ private:
     double omega, deltaEmin;
     std::mt19937_64 randomGenerator;
     std::uniform_real_distribution<double> uniformProbabilityDistribution;
+    double dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus;
 
 public:
-    Microemulsion(Grid &grid, double omega, Logger &logger);
+    Microemulsion(Grid &grid, double omega, Logger &logger,
+                  double deltaTChem,
+                  double kOn,
+                  double kOff,
+                  double kChromPlus,
+                  double kChromMinus,
+                  double kRnaPlus,
+                  double kRnaMinus);
+    
+    void setDtChem(double dtChem);
+    
+    void setKOn(double kOn);
+    
+    void setKOff(double kOff);
+    
+    void setKChromPlus(double kChromPlus);
+    
+    void setKChromMinus(double kChromMinus);
+    
+    void setKRnaPlus(double kRnaPlus);
+    
+    void setKRnaMinus(double kRnaMinus);
     
     /**
      * Attempts a random swap between two neighbouring cells on the grid.

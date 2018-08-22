@@ -188,26 +188,48 @@ int Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset, Chemic
     return rows + columns;
 }
 
+void Grid::setChemicalSpecies(ChemicalProperties &target, ChemicalSpecies species)
+{
+    setBit(target, SPECIES_BIT, species);
+}
+
 void Grid::setChemicalSpecies(int column, int row, ChemicalSpecies species)
 {
-    setBit(getElement(column, row).chemicalProperties, SPECIES_BIT, species);
+    setChemicalSpecies(getElement(column, row).chemicalProperties, species);
+}
+
+void Grid::setActivity(ChemicalProperties &target, Activity activity)
+{
+    setBit(target, ACTIVE_BIT, activity);
 }
 
 void Grid::setActivity(int column, int row, Activity activity)
 {
-    setBit(getElement(column, row).chemicalProperties, ACTIVE_BIT, activity);
+    setActivity(getElement(column, row).chemicalProperties, activity);
+}
+
+void Grid::setChemicalProperties(ChemicalProperties &target, ChemicalSpecies species, Activity activity)
+{
+    setChemicalSpecies(target, species);
+    setActivity(target, activity);
 }
 
 void Grid::setChemicalProperties(int column, int row, ChemicalSpecies species, Activity activity)
 {
-    setBit(getElement(column, row).chemicalProperties, SPECIES_BIT, species);
-    setBit(getElement(column, row).chemicalProperties, ACTIVE_BIT, activity);
+    setChemicalProperties(getElement(column, row).chemicalProperties, species, activity);
 }
 
 void Grid::setChemicalProperties(int column, int row, ChemicalProperties chemicalProperties)
 {
     setChemicalProperties(column, row, static_cast<ChemicalSpecies>(getBit(chemicalProperties, SPECIES_BIT)),
                           static_cast<Activity>(getBit(chemicalProperties, ACTIVE_BIT)));
+}
+
+ChemicalProperties Grid::chemicalPropertiesOf(ChemicalSpecies species, Activity activity)
+{
+    ChemicalProperties chemicalProperties = 0;
+    setChemicalProperties(chemicalProperties, species, activity);
+    return chemicalProperties;
 }
 
 void Grid::setFlags(int column, int row, Flags flags)

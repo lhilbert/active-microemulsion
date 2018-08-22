@@ -138,13 +138,17 @@ public:
     
     int getSpeciesCount(ChemicalSpecies chemicalSpecies);
     
+    static void setChemicalSpecies(ChemicalProperties &target, ChemicalSpecies species);
     void setChemicalSpecies(int column, int row, ChemicalSpecies species);
     
+    static void setActivity(ChemicalProperties &target, Activity activity);
     void setActivity(int column, int row, Activity activity);
     
+    static void setChemicalProperties(ChemicalProperties &target, ChemicalSpecies species, Activity activity);
     void setChemicalProperties(int column, int row, ChemicalSpecies species, Activity activity);
-    
     void setChemicalProperties(int column, int row, ChemicalProperties chemicalProperties);
+    
+    static ChemicalProperties chemicalPropertiesOf(ChemicalSpecies species, Activity activity);
     
     void setFlags(int column, int row, Flags flags);
     
@@ -193,12 +197,12 @@ private:
     
     unsigned short getNewChainId();
     
-    inline bool getBit(unsigned char bitfield, unsigned char bit)
+    inline static bool getBit(unsigned char bitfield, unsigned char bit)
     {
         return static_cast<bool>((bitfield >> bit) & 1U);
     }
     
-    inline void setBit(unsigned char &bitfield, unsigned char bit, unsigned char value)
+    inline static void setBit(unsigned char &bitfield, unsigned char bit, unsigned char value)
     {
         // Set the SPECIES_BIT to the species value
         bitfield ^= (-value ^ bitfield) & (1U << bit);

@@ -127,21 +127,31 @@ int main(int argc, const char **argv)
     int numChromatineCells = (rows * columns) - numRbpCells;
     double speciesRatio = static_cast<double>(numRbpCells) / numChromatineCells;
     logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f", DUMP(numChromatineCells), DUMP(numRbpCells), DUMP(speciesRatio));
-    logger.logMsg(PRODUCTION, "Initializing microemulsion");
-    Microemulsion microemulsion(grid, omega, logger);
+    logger.logMsg(PRODUCTION, "Initializing microemulsion: %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f",
+                  DUMP(dtChem), DUMP(kOn), DUMP(kOff), DUMP(kChromPlus), DUMP(kChromMinus), DUMP(kRnaPlus), DUMP(kRnaMinus));
+    Microemulsion microemulsion(grid, omega, logger,
+            dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus);
     
-    // Initialize PgmWriter
-    logger.logMsg(INFO, "Initializing PGM writer");
-    PgmWriter pgmWriter(columns, rows, 1, outputDir+"/microemulsion");
-    pgmWriter.setData(grid.getData());
+    // Initialize PgmWriters for the 3 channels
+    PgmWriter dnaWriter(logger, columns, rows, outputDir + "/microemulsion_DNA", "DNA",
+                        Grid::chemicalPropertiesOf(CHROMATINE, NOT_ACTIVE));
+    PgmWriter rnaWriter(logger, columns, rows, outputDir + "/microemulsion_RNA", "RNA",
+                        Grid::chemicalPropertiesOf(RBP, ACTIVE));
+    PgmWriter transcriptionWriter(logger, columns, rows, outputDir + "/microemulsion_Transcription", "Pol II Ser2Phos",
+                        Grid::chemicalPropertiesOf(CHROMATINE, ACTIVE));
+    dnaWriter.setData(grid.getData());
+    rnaWriter.setData(grid.getData());
+    transcriptionWriter.setData(grid.getData());
     
     // Simulation loops
     double t = 0;
     // Write initial data to file
-    logger.logEvent(PRODUCTION, t, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
-                  pgmWriter.getOutputFileFullNameCstring());
-    pgmWriter.write();
-    pgmWriter.advanceSeries();
+    dnaWriter.write(t);
+    rnaWriter.write(t);
+    transcriptionWriter.write(t);
+    dnaWriter.advanceSeries();
+    rnaWriter.advanceSeries();
+    transcriptionWriter.advanceSeries();
     //
     double lastOutputTime = 0;
     unsigned long swapAttempts = 0;
@@ -158,15 +168,18 @@ int main(int argc, const char **argv)
         }
     
         // Writing this step to file
+        //todo: Extend info logged in simulation summary to include chem reaction
         logger.logEvent(PRODUCTION, t,
                         "Simulation summary: swapAttemps=%ld "
                         "| swapsPerformed=%ld "
                         "| swapRatio=%f",
                         swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
-        logger.logEvent(PRODUCTION, t, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
-                      pgmWriter.getOutputFileFullNameCstring());
-        pgmWriter.write();
-        pgmWriter.advanceSeries();
+        dnaWriter.write(t);
+        rnaWriter.write(t);
+        transcriptionWriter.write(t);
+        dnaWriter.advanceSeries();
+        rnaWriter.advanceSeries();
+        transcriptionWriter.advanceSeries();
         // Advance output timer
         lastOutputTime += dtOut;
     }
@@ -182,9 +195,9 @@ int main(int argc, const char **argv)
 //                        "| swapsPerformed=%ld "
 //                        "| swapRatio=%f",
 //                        swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
-//        logger.logEvent(PRODUCTION, t, "Writing PGM file #%d (%s)", pgmWriter.getCounter(),
-//                      pgmWriter.getOutputFileFullNameCstring());
-//        pgmWriter.write();
+//        dnaWriter.write(t);
+//        rnaWriter.write(t);
+//        transcriptionWriter.write(t);
 //    }
     
     //
