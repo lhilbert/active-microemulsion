@@ -23,25 +23,33 @@ int main(int argc, const char **argv)
     opt::options_description argsDescription("Supported options");
     // Here below some arguments, to be completed.
     argsDescription.add_options()
-        ("help,h", "Show this help and exit")
-        ("debug,d", "Enable the debug logging level")
-        ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
-        ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
-                "Specify the folder to use for output (log and data)")
-        ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
-                "Specify the image to be used as initial value for grid configuration")
-        ("end-time,T", opt::value<double>(&endTime)->default_value(1e3), "End time for the simulation")
-        ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
-        ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
-        ("omega,w", opt::value<double>(&omega)->default_value(0.5), "Energy cost for contiguity of non-affine species (omega model parameter)")
-        ("sppps,s", opt::value<int>(&swapsPerPixelPerUnitTime)->default_value(333), "Number of average swap attempts per pixel per second")
-        ("kOn", opt::value<double>(&kOn)->default_value(1.25e-3), "Reaction rate - Chromatin from non-transcribable to transcribable state")
-        ("kOff", opt::value<double>(&kOff)->default_value(2.5e-3), "Reaction rate - Chromatin from transcribable to non-transcribable state")
-        ("kChromPlus", opt::value<double>(&kChromPlus)->default_value(6.666666666e-3), "Reaction rate - Transcription turned ON")
-        ("kChromMinus", opt::value<double>(&kChromMinus)->default_value(1.666666666e-3), "Reaction rate - Transcription turned OFF")
-        ("kRnaPlus", opt::value<double>(&kRnaPlus)->default_value(8.333333333e-3), "Reaction rate - RBP from free to bound state")
-        ("kRnaMinus", opt::value<double>(&kRnaMinus)->default_value(8.333333333e-4), "Reaction rate - RBP from bound to free state")
-        ;
+            ("help,h", "Show this help and exit")
+            ("debug,d", "Enable the debug logging level")
+            ("coarse-debug", "Enable the coarse_debug logging level")
+            ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
+            ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
+             "Specify the folder to use for output (log and data)")
+            ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
+             "Specify the image to be used as initial value for grid configuration")
+            ("end-time,T", opt::value<double>(&endTime)->default_value(1e3), "End time for the simulation")
+            ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
+            ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
+            ("omega,w", opt::value<double>(&omega)->default_value(0.5),
+             "Energy cost for contiguity of non-affine species (omega model parameter)")
+            ("sppps,s", opt::value<int>(&swapsPerPixelPerUnitTime)->default_value(333),
+             "Number of average swap attempts per pixel per second")
+            ("kOn", opt::value<double>(&kOn)->default_value(1.25e-3),
+             "Reaction rate - Chromatin from non-transcribable to transcribable state")
+            ("kOff", opt::value<double>(&kOff)->default_value(2.5e-3),
+             "Reaction rate - Chromatin from transcribable to non-transcribable state")
+            ("kChromPlus", opt::value<double>(&kChromPlus)->default_value(6.666666666e-3),
+             "Reaction rate - Transcription turned ON")
+            ("kChromMinus", opt::value<double>(&kChromMinus)->default_value(1.666666666e-3),
+             "Reaction rate - Transcription turned OFF")
+            ("kRnaPlus", opt::value<double>(&kRnaPlus)->default_value(8.333333333e-3),
+             "Reaction rate - RBP from free to bound state")
+            ("kRnaMinus", opt::value<double>(&kRnaMinus)->default_value(8.333333333e-4),
+             "Reaction rate - RBP from bound to free state");
     opt::variables_map varsMap;
     opt::store(opt::parse_command_line(argc, argv, argsDescription), varsMap);
     opt::notify(varsMap);
@@ -52,18 +60,23 @@ int main(int argc, const char **argv)
         return 1;
     }
     
-    bool debugMode = varsMap.count("debug")>0;
-    bool quietMode = varsMap.count("quiet")>0;
+    bool debugMode = varsMap.count("debug") > 0;
+    bool coarseDebugMode = varsMap.count("coarse-debug") > 0;
+    bool quietMode = varsMap.count("quiet") > 0;
 //    int endTime = argparser.retrieve<int>("end-time");
     //
     int numInnerCells = rows * columns;
-    double dt = 1.0 / (double)(swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
-    kSet.insert(kOn); kSet.insert(kOff);
-    kSet.insert(kChromPlus); kSet.insert(kChromMinus);
-    kSet.insert(kRnaPlus); kSet.insert(kRnaMinus);
+    double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
+    kSet.insert(kOn);
+    kSet.insert(kOff);
+    kSet.insert(kChromPlus);
+    kSet.insert(kChromMinus);
+    kSet.insert(kRnaPlus);
+    kSet.insert(kRnaMinus);
     kMax = *kSet.rbegin(); // Get the maximum on the set
     double dtChem = 0.1 / kMax;
-    double dtOut = endTime/numVisualizationOutputs; // The dt used for visualization output. //todo read this from config
+    double dtOut =
+            endTime / numVisualizationOutputs; // The dt used for visualization output. //todo read this from config
     
     // If output folder doesn't exist, create it
     if (!boost::filesystem::exists(outputDir))
@@ -76,6 +89,10 @@ int main(int argc, const char **argv)
     if (debugMode)
     {
         logger.setDebugLevel(DEBUG);
+    }
+    else if (coarseDebugMode)
+    {
+        logger.setDebugLevel(COARSE_DEBUG);
     }
     else if (quietMode)
     {
@@ -107,38 +124,62 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dt));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtChem));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtOut));
-
+    
     // Config-file parser
     //logger.logMsg(PRODUCTION, "Reading configuration");
     //todo
     
     // Initialize data structures
     Grid grid(columns, rows, logger);
-//    grid.initializeInnerGridAs(CHROMATINE, NOT_ACTIVE);
-//    grid.initializeGridRandomly(0.5, RBP, ACTIVE);
-    grid.initializeInnerGridAs(RBP, ACTIVE);
-//    grid.initializeGridWithSingleChain(RBP, ACTIVE);
-//    grid.initializeGridWithTwoParallelChains(5, RBP, ACTIVE);
-//    grid.initializeGridWithTwoParallelChains(10, RBP, ACTIVE);
-    grid.initializeGridWithTwoOrthogonalChains(0, 0, CHROMATINE, NOT_ACTIVE);
-//    grid.initializeGridWithTwoOrthogonalChains(-5, -5, RBP, ACTIVE);
-//    grid.initializeGridWithTwoOrthogonalChains(+5, +5, RBP, ACTIVE);
+//    grid.initializeInnerGridAs(Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                               Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridRandomly(0.5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
+    grid.initializeInnerGridAs(Grid::chemicalPropertiesOf(RBP, NOT_ACTIVE));
+    grid.initializeGridWithSingleChain(Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+                                       Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+    grid.initializeGridWithTwoParallelChains(5, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+    grid.initializeGridWithTwoParallelChains(10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+    grid.initializeGridWithTwoParallelChains(15, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+    grid.initializeGridWithTwoParallelChains(20, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+    grid.initializeGridWithTwoParallelChains(25, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+    grid.initializeGridWithTwoParallelChains(30, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+    grid.initializeGridWithTwoParallelChains(35, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+    grid.initializeGridWithTwoParallelChains(40, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+    grid.initializeGridWithTwoParallelChains(45, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoOrthogonalChains(0, 0, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                                               Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoOrthogonalChains(-5, -5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
+//    grid.initializeGridWithTwoOrthogonalChains(+5, +5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
     int numRbpCells = grid.getSpeciesCount(RBP);
-    int numChromatineCells = (rows * columns) - numRbpCells;
-    double speciesRatio = static_cast<double>(numRbpCells) / numChromatineCells;
-    logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f", DUMP(numChromatineCells), DUMP(numRbpCells), DUMP(speciesRatio));
+    int numChromatinCells = (rows * columns) - numRbpCells;
+    double speciesRatio = static_cast<double>(numRbpCells) / numChromatinCells;
+    logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f", DUMP(numChromatinCells), DUMP(numRbpCells),
+                  DUMP(speciesRatio));
     logger.logMsg(PRODUCTION, "Initializing microemulsion: %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f",
-                  DUMP(dtChem), DUMP(kOn), DUMP(kOff), DUMP(kChromPlus), DUMP(kChromMinus), DUMP(kRnaPlus), DUMP(kRnaMinus));
+                  DUMP(dtChem), DUMP(kOn), DUMP(kOff), DUMP(kChromPlus), DUMP(kChromMinus), DUMP(kRnaPlus),
+                  DUMP(kRnaMinus));
     Microemulsion microemulsion(grid, omega, logger,
-            dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus);
+                                dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus);
     
     // Initialize PgmWriters for the 3 channels
     PgmWriter dnaWriter(logger, columns, rows, outputDir + "/microemulsion_DNA", "DNA",
-                        Grid::chemicalPropertiesOf(CHROMATINE, NOT_ACTIVE));
+                        Grid::isChromatin);
     PgmWriter rnaWriter(logger, columns, rows, outputDir + "/microemulsion_RNA", "RNA",
-                        Grid::chemicalPropertiesOf(RBP, ACTIVE));
+                        [](ChemicalProperties chemicalProperties) {
+                            return Grid::isActiveRBP(chemicalProperties)
+                                   || Grid::isActiveChromatin(chemicalProperties);
+                        });
     PgmWriter transcriptionWriter(logger, columns, rows, outputDir + "/microemulsion_Transcription", "Pol II Ser2Phos",
-                        Grid::chemicalPropertiesOf(CHROMATINE, ACTIVE));
+                                  Grid::isActiveChromatin);
     dnaWriter.setData(grid.getData());
     rnaWriter.setData(grid.getData());
     transcriptionWriter.setData(grid.getData());
@@ -153,27 +194,45 @@ int main(int argc, const char **argv)
     rnaWriter.advanceSeries();
     transcriptionWriter.advanceSeries();
     //
-    double lastOutputTime = 0;
+    double nextOutputTime = dtOut;
+    double nextChemTime = dtChem;
     unsigned long swapAttempts = 0;
     unsigned long swapsPerformed = 0;
+    unsigned long chemChangesPerformed = 0;
     logger.logEvent(INFO, t, "Entering main time-stepping loop");
     while (t < endTime)
     {
+        // Hack
+        if (t > endTime / 3)
+        {
+            microemulsion.setKChromPlus(0);
+//            microemulsion.setKRnaMinus(0);
+        }
         // Time-stepping loop
-        while (t < lastOutputTime + dtOut)
+        while (t < nextOutputTime)
         {
             t += dt;
             swapsPerformed += microemulsion.performRandomSwap();
             ++swapAttempts;
+            
+            // Now check if to perform chemical reactions
+            if (t >= nextChemTime)
+            {
+                chemChangesPerformed += microemulsion.performChemicalReactions();
+                nextChemTime += dtChem;
+            }
         }
-    
+        
         // Writing this step to file
         //todo: Extend info logged in simulation summary to include chem reaction
         logger.logEvent(PRODUCTION, t,
-                        "Simulation summary: swapAttemps=%ld "
-                        "| swapsPerformed=%ld "
-                        "| swapRatio=%f",
-                        swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
+                        "Simulation summary: %s=%ld "
+                        "| %s=%ld "
+                        "| swapRatio=%f"
+                        "| %s=%ld ",
+                        DUMP(swapAttempts), DUMP(swapsPerformed),
+                        (double) swapsPerformed / swapAttempts,
+                        DUMP(chemChangesPerformed));
         dnaWriter.write(t);
         rnaWriter.write(t);
         transcriptionWriter.write(t);
@@ -181,14 +240,14 @@ int main(int argc, const char **argv)
         rnaWriter.advanceSeries();
         transcriptionWriter.advanceSeries();
         // Advance output timer
-        lastOutputTime += dtOut;
+        nextOutputTime += dtOut;
     }
     logger.logEvent(DEBUG, t, "Exiting main time-stepping loop");
 //    logger.logEvent(DEBUG, t, "%s=%f", DUMP(lastOutputTime));
 
 //    Below should not be required. //todo: remove this part if really useless
 //    // Final output, but make sure we didn't just write in the last iteration!
-//    if (t > lastOutputTime)
+//    if (t > nextOutputTime - dtOut)
 //    {
 //        logger.logEvent(PRODUCTION, t,
 //                        "Simulation summary: swapAttemps=%ld "

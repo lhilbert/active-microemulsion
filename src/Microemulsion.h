@@ -62,6 +62,14 @@ public:
      * @return The total number of chemical changes.
      */
     unsigned int performChemicalReactions();
+    
+    /**
+     * Switch the given chain to the transcribable state.
+     * @param targetChains
+     */
+    void enableTranscribabilityOnChains(std::set<ChainId> targetChains);
+    
+    void disableTranscribabilityOnChains(std::set<ChainId> targetChains);
 
 private:
     double computePartialDifferentialEnergy(int x, int y, int nx, int ny);
@@ -108,9 +116,11 @@ private:
                                                       ChainProperties &chainProperties);
     
     // If reaction causes a change in chemical properties, return True.
-    bool performChemicalReaction(int row, int column);
+    bool performChemicalReaction(int column, int row);
     
+    bool performActivitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
     
+    bool performTranscribabilitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
 };
 
 

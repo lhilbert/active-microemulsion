@@ -90,49 +90,52 @@ void Grid::pickRandomNeighbourOf(int i, int j, int &neighbourI, int &neighbourJ)
             );
 }
 
-int Grid::initializeInnerGridAs(ChemicalSpecies chemicalSpecies, Activity activity)
+int Grid::initializeInnerGridAs(ChemicalProperties chemicalProperties, Flags flags)
 {
     for (int j = getFirstRow(); j <= getLastRow(); ++j)
     {
         for (int i = getFirstColumn(); i <= getLastColumn(); ++i)
         {
-            setChemicalProperties(i, j, chemicalSpecies, activity);
+            setChemicalProperties(i, j, chemicalProperties);
+            setFlags(i, j, flags);
         }
     }
     return columns*rows;
 }
 
-int Grid::initializeGridRandomly(double randomRatio, ChemicalSpecies chemicalSpecies, Activity activity)
+int Grid::initializeGridRandomly(double randomRatio, ChemicalProperties chemicalProperties, Flags flags)
 {
     logger.logMsg(PRODUCTION, "Initializing grid randomly: %s=%f", DUMP(randomRatio));
     
     int numRandomCells = static_cast<int>(round(columns * rows * randomRatio));
-    int i = 0;
+    int c = 0;
     int safetyCounter = 0;
     int maxIter = 5 * columns * rows;
-    while (i < numRandomCells && safetyCounter < maxIter)
+    while (c < numRandomCells && safetyCounter < maxIter)
     {
         int x = 0, y = 0;
         pickRandomElement(x, y);
         if (chainsCellBelongsTo(x, y).empty())
         {
-            setChemicalProperties(x, y, chemicalSpecies, activity);
-            ++i;
+            setChemicalProperties(x, y, chemicalProperties);
+            setFlags(x, y, flags);
+            ++c;
         }
         ++safetyCounter;
     }
-    return i;
+    return c;
 }
 
-int Grid::initializeGridWithSingleChain(ChemicalSpecies chemicalSpecies, Activity activity)
+int Grid::initializeGridWithSingleChain(ChemicalProperties chemicalProperties, Flags flags)
 {
     logger.logMsg(PRODUCTION, "Initializing grid with single horizontal chain");
     
     int chainCol = columns / 2;
-    unsigned short chainId = getNewChainId();
+    ChainId chainId = getNewChainId();
     for (int j = 1; j <= rows; ++j)
     {
-        setChemicalProperties(chainCol, j, chemicalSpecies, activity);
+        setChemicalProperties(chainCol, j, chemicalProperties);
+        setFlags(chainCol, j, flags);
         setChainProperties(chainCol, j, chainId,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
@@ -140,20 +143,22 @@ int Grid::initializeGridWithSingleChain(ChemicalSpecies chemicalSpecies, Activit
     return rows;
 }
 
-int Grid::initializeGridWithTwoParallelChains(int distance, ChemicalSpecies chemicalSpecies, Activity activity)
+int Grid::initializeGridWithTwoParallelChains(int distance, ChemicalProperties chemicalProperties, Flags flags)
 {
     logger.logMsg(PRODUCTION, "Initializing grid with two parallel chains: %s=%d", DUMP(distance));
     
     int chainCol = (columns + distance) / 2;
-    unsigned short chainId1 = getNewChainId();
-    unsigned short chainId2 = getNewChainId();
+    ChainId chainId1 = getNewChainId();
+    ChainId chainId2 = getNewChainId();
     for (int j = 1; j <= rows; ++j)
     {
-        setChemicalProperties(chainCol, j, chemicalSpecies, activity);
+        setChemicalProperties(chainCol, j, chemicalProperties);
+        setFlags(chainCol, j, flags);
         setChainProperties(chainCol, j, chainId1,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
-        setChemicalProperties(chainCol - distance, j, chemicalSpecies, activity);
+        setChemicalProperties(chainCol - distance, j, chemicalProperties);
+        setFlags(chainCol - distance, j, flags);
         setChainProperties(chainCol - distance, j, chainId2,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
@@ -161,25 +166,27 @@ int Grid::initializeGridWithTwoParallelChains(int distance, ChemicalSpecies chem
     return 2*rows;
 }
 
-int Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset, ChemicalSpecies chemicalSpecies, Activity activity)
+int Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset, ChemicalProperties chemicalProperties, Flags flags)
 {
     logger.logMsg(PRODUCTION, "Initializing grid with two orthogonal chains: %s=%d, %s=%d", DUMP(xOffset), DUMP(yOffset));
     
     int chainCol = (columns / 2) + xOffset;
     int chainRow = (rows / 2) + yOffset;
-    unsigned short chainId1 = getNewChainId();
+    ChainId chainId1 = getNewChainId();
     for (int j = 1; j <= rows; ++j)
     {
-        setChemicalProperties(chainCol, j, chemicalSpecies, activity);
+        setChemicalProperties(chainCol, j, chemicalProperties);
+        setFlags(chainCol, j, flags);
         setChainProperties(chainCol, j, chainId1,
                            static_cast<unsigned int>(j - 1),
                            (unsigned int) rows);
     }
     
-    unsigned short chainId2 = getNewChainId();
+    ChainId chainId2 = getNewChainId();
     for (int i = 1; i <= columns; ++i)
     {
-        setChemicalProperties(i, chainRow, chemicalSpecies, activity);
+        setChemicalProperties(i, chainRow, chemicalProperties);
+        setFlags(i, chainRow, flags);
         setChainProperties(i, chainRow, chainId2,
                            static_cast<unsigned int>(i - 1),
                            (unsigned int) columns);
@@ -232,14 +239,35 @@ ChemicalProperties Grid::chemicalPropertiesOf(ChemicalSpecies species, Activity 
     return chemicalProperties;
 }
 
+void Grid::setFlags(Flags &target, Transcribability transcribability, TranscriptionInhibition inhibition)
+{
+    setTranscribability(target, transcribability);
+    setTranscriptionInhibition(target, inhibition);
+}
+
 void Grid::setFlags(int column, int row, Flags flags)
 {
     getElement(column, row).flags = flags;
 }
 
+void Grid::setTranscribability(Flags &target, Transcribability transcribability)
+{
+    setBit(target, TRANSCRIBABLE_BIT, transcribability);
+}
+
 void Grid::setTranscribability(int column, int row, Transcribability transcribability)
 {
-    setBit(getElement(column, row).flags, TRANSCRIBABLE_BIT, transcribability);
+    setTranscribability(getElement(column, row).flags, transcribability);
+}
+
+void Grid::setTranscriptionInhibition(Flags &target, TranscriptionInhibition inhibition)
+{
+    setBit(target, TRANSCRIPTION_INHIBITION_BIT, inhibition);
+}
+
+void Grid::setTranscriptionInhibition(int column, int row, TranscriptionInhibition inhibition)
+{
+    setTranscriptionInhibition(getElement(column, row).flags, inhibition);
 }
 
 CellData &Grid::getElement(int i, int j)
@@ -257,7 +285,14 @@ void Grid::setElement(int i, int j, CellData &value)
     data[j][i] = value;
 }
 
-size_t Grid::setChainProperties(int column, int row, unsigned short chainId, unsigned int position, unsigned int length)
+Flags Grid::flagsOf(Transcribability transcribability, TranscriptionInhibition inhibition)
+{
+    Flags flags = 0;
+    setFlags(flags, transcribability, inhibition);
+    return flags;
+}
+
+size_t Grid::setChainProperties(int column, int row, ChainId chainId, unsigned int position, unsigned int length)
 {
     CellData &element = getElement(column, row);
     int k = 0;
@@ -279,7 +314,7 @@ size_t Grid::setChainProperties(int column, int row, unsigned short chainId, uns
     return static_cast<size_t>(k);
 }
 
-unsigned char Grid::cellBelongsToChain(int column, int row, unsigned short chainId)
+unsigned char Grid::cellBelongsToChain(int column, int row, ChainId chainId)
 {
     unsigned char found = MAX_CROSSING_CHAINS;
     for (unsigned char k = 0; k < MAX_CROSSING_CHAINS; ++k)
@@ -335,7 +370,7 @@ std::vector<std::reference_wrapper<ChainProperties>> Grid::chainsCellBelongsTo(i
     auto chains = std::vector<std::reference_wrapper<ChainProperties>>();
     for (unsigned char k = 0; k < MAX_CROSSING_CHAINS; ++k)
     {
-        ChainProperties &chainProperties = data[row][column].chainProperties[k];
+        ChainProperties &chainProperties = getElement(column, row).chainProperties[k];
         unsigned int chainLength = chainProperties.chainLength;
         if (chainLength > 0)
         {
@@ -345,7 +380,22 @@ std::vector<std::reference_wrapper<ChainProperties>> Grid::chainsCellBelongsTo(i
     return chains;
 }
 
-unsigned short Grid::getNewChainId()
+std::set<ChainId> Grid::chainsCellBelongsTo(CellData &cellData)
+{
+    auto chainIdSet = std::set<ChainId>();
+    for (unsigned char k = 0; k < MAX_CROSSING_CHAINS; ++k)
+    {
+        ChainProperties &chainProperties = cellData.chainProperties[k];
+        unsigned int chainLength = chainProperties.chainLength;
+        if (chainLength > 0)
+        {
+           chainIdSet.insert(chainProperties.chainId);
+        }
+    }
+    return chainIdSet;
+}
+
+ChainId Grid::getNewChainId()
 {
     logger.logMsg(PRODUCTION, "Initializing new chain with chainId=%d", nextAvailableChainId);
     return nextAvailableChainId++; // Return and increment
@@ -362,4 +412,17 @@ int Grid::getSpeciesCount(ChemicalSpecies chemicalSpecies)
         }
     }
     return counter;
+}
+
+bool Grid::doesAnyNeighbourMatchCondition(int column, int row, bool (*condition)(CellData &))
+{
+    return condition(getElement(column-1, row-1))
+        || condition(getElement(column,   row-1))
+        || condition(getElement(column+1, row-1))
+        || condition(getElement(column-1, row))
+        || condition(getElement(column+1, row))
+        || condition(getElement(column-1, row+1))
+        || condition(getElement(column,   row+1))
+        || condition(getElement(column+1, row+1))
+        ;
 }

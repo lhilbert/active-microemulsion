@@ -18,7 +18,7 @@ private:
     const unsigned int depth;
     std::string outputFileName;
     std::string channelName;
-    ChemicalProperties signalChemicalMatcher;
+    bool (*signalMatcher)(ChemicalProperties chemicalProperties);
     const CellData **data;
     std::FILE *pgm;
     unsigned int counter;
@@ -33,7 +33,7 @@ public:
      * - The chemical property to be matched for signal
      */
     PgmWriter(Logger &logger, int W, int H, std::string outputFile, std::string channelName,
-              ChemicalProperties signalMatcher);
+              bool (*signalMatcher)(ChemicalProperties chemicalProperties));
     ~PgmWriter();
     // Data pointer should usually be done just once.
     void setData(const CellData **newData);

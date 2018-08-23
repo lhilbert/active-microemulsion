@@ -5,12 +5,13 @@
 #include "PgmWriter.h"
 
 PgmWriter::PgmWriter(Logger &logger, int W, int H, std::string outputFile, std::string channelName,
-                     ChemicalProperties signalMatcher) : logger(logger),
-                                                         width(W), height(H), depth(1),
-                                                         outputFileName(outputFile),
-                                                         channelName(channelName),
-                                                         signalChemicalMatcher(signalMatcher),
-                                                         pgm(nullptr), counter(0)
+                     bool (*signalMatcher)(ChemicalProperties chemicalProperties))
+        : logger(logger),
+          width(W), height(H), depth(1),
+          outputFileName(outputFile),
+          channelName(channelName),
+          signalMatcher(signalMatcher),
+          pgm(nullptr), counter(0)
 {
     logger.logMsg(INFO, "Initializing PGM writer for channel %s", channelName.data());
     advanceSeries();
@@ -24,9 +25,9 @@ void PgmWriter::setData(const CellData **newData)
 void PgmWriter::write()
 {
     logger.logMsg(PRODUCTION, "Writing PGM file #%d, channel %s (%s)",
-            getCounter(),
-            channelName.data(),
-            getOutputFileFullNameCstring());
+                  getCounter(),
+                  channelName.data(),
+                  getOutputFileFullNameCstring());
     __write();
 }
 
@@ -84,7 +85,7 @@ void PgmWriter::__write()
         {
             ChemicalProperties chemicalProperties = data[(i / 2) + 1][j].chemicalProperties;
             char character = 48; // ASCII '0' char
-            if (chemicalProperties == signalChemicalMatcher)
+            if (signalMatcher(chemicalProperties))
             {
                 character = 49; // ASCII '1' char
             }

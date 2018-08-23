@@ -3,7 +3,7 @@
 //
 
 #include "Microemulsion.h"
-#include <omp.h>
+//#include <omp.h>
 
 Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger,
                              double deltaTChem,
@@ -81,11 +81,11 @@ bool Microemulsion::doesPairRequireEnergyCost(int x, int y, int nx, int ny) cons
     CellData &cellData = grid.getElement(x, y);
     CellData &nCellData = grid.getElement(nx, ny);
     // Here logic for pairs that require an omega energy cost
-    if (Grid::isChromatine(cellData))
+    if (Grid::isChromatin(cellData))
     {
         if (Grid::isActive(cellData))
         {
-            isEnergyCostRequired = Grid::isChromatine(nCellData);
+            isEnergyCostRequired = Grid::isChromatin(nCellData);
         }
         else
         {
@@ -94,7 +94,7 @@ bool Microemulsion::doesPairRequireEnergyCost(int x, int y, int nx, int ny) cons
     }
     else if (Grid::isRBP(cellData) && Grid::isActive(cellData))
     {
-        isEnergyCostRequired = Grid::isChromatine(cellData) && !Grid::isActive(nCellData);
+        isEnergyCostRequired = Grid::isChromatin(cellData) && !Grid::isActive(nCellData);
     }
     return isEnergyCostRequired;
 }
@@ -383,32 +383,100 @@ bool Microemulsion::isSwapAllowedByChainNeighboursInVerticalCase(int x, int y, i
 
 unsigned int Microemulsion::performChemicalReactions()
 {
+    logger.logMsg(INFO, "Performing chemical reactions");
     unsigned int chemicalChangesCounter = 0;
-    for (int i = grid.getFirstRow(); i <= grid.getLastRow(); ++i)
+    for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
     {
-        for (int j = grid.getFirstColumn(); j <= grid.getLastColumn(); ++j)
+        for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
         {
             // Chemical reaction takes place on each cell of the grid.
-            chemicalChangesCounter += performChemicalReaction(i, j);
+            chemicalChangesCounter += performChemicalReaction(column, row);
         }
     }
-    return 0;
+    return chemicalChangesCounter;
 }
 
-bool Microemulsion::performChemicalReaction(int row, int column)
+bool Microemulsion::performChemicalReaction(int column, int row)
 {
     bool isChemPropChanged = false;
-    CellData& cellData = grid.getElement(column, row);
-    if (Grid::isChromatine(cellData))
+    CellData &cellData = grid.getElement(column, row);
+    if (Grid::isChromatin(cellData))
     {
-        // Reaction for Chromatine
+        // Reaction for Chromatin
+        bool isTranscribable = Grid::isTranscribable(cellData);
+        isChemPropChanged = performActivitySwitchingReaction(cellData,
+                isTranscribable*kChromPlus, kChromMinus);
         
+        //todo: Check if the transcribability reaction is ok here or should be performed in a different place
+        bool isTranscriptionAllowed = !Grid::isTranscriptionInhibited(cellData);
+        performTranscribabilitySwitchingReaction(cellData, isTranscriptionAllowed*kOn, kOff);
     }
     else if (Grid::isRBP(cellData))
     {
         // Reaction for RBP
+        bool isInProximityOfTranscription =
+                grid.doesAnyNeighbourMatchCondition(column, row,
+                    [](CellData& cell) {
+                        return Grid::isChromatin(cell) && Grid::isActive(cell);
+                    }
+                );
+        //debug
+        if (isInProximityOfTranscription)
+        {
+            logger.logMsg(COARSE_DEBUG, "Microemulsion::performChemicalReaction "
+                                 "Cell %s=%d, %s=%d is in proximity of transcription",
+                                 DUMP(column), DUMP(row));
+        }
+        //
+        isChemPropChanged = performActivitySwitchingReaction(cellData,
+                isInProximityOfTranscription*kRnaPlus, kRnaMinus);
     }
     return isChemPropChanged;
+}
+
+bool Microemulsion::performActivitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus)
+{
+    bool isSwitched = false;
+    if (Grid::isActive(cellData))
+    {
+        if (randomChoiceWithProbability(dtChem*reactionRateMinus))
+        {
+            Grid::setActivity(cellData.chemicalProperties, NOT_ACTIVE);
+            isSwitched = true;
+        }
+    }
+    else
+    {
+        if (randomChoiceWithProbability(dtChem*reactionRatePlus))
+        {
+            Grid::setActivity(cellData.chemicalProperties, ACTIVE);
+            isSwitched = true;
+        }
+    }
+    return isSwitched;
+}
+
+bool Microemulsion::performTranscribabilitySwitchingReaction(CellData &cellData, double reactionRatePlus,
+                                                             double reactionRateMinus)
+{
+    bool isSwitched = false;
+    if (Grid::isTranscribable(cellData))
+    {
+        if (randomChoiceWithProbability(dtChem*reactionRateMinus))
+        {
+            Grid::setTranscribability(cellData.flags, NOT_TRANSCRIBABLE);
+            isSwitched = true;
+        }
+    }
+    else
+    {
+        if (randomChoiceWithProbability(dtChem*reactionRatePlus))
+        {
+            Grid::setTranscribability(cellData.flags, TRANSCRIBABLE);
+            isSwitched = true;
+        }
+    }
+    return isSwitched;
 }
 
 void Microemulsion::setDtChem(double dtChem)
@@ -452,3 +520,15 @@ void Microemulsion::setKRnaMinus(double kRnaMinus)
     logger.logMsg(PRODUCTION, "Microemulsion::setKRnaMinus %s=%f", DUMP(kRnaMinus));
     Microemulsion::kRnaMinus = kRnaMinus;
 }
+
+void Microemulsion::enableTranscribabilityOnChains(std::set<ChainId> targetChains)
+{
+    //todo!
+}
+
+void Microemulsion::disableTranscribabilityOnChains(std::set<ChainId> targetChains)
+{
+    //todo!
+}
+
+

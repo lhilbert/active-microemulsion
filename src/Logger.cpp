@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cstdarg>
 #include <cstdio>
+#include <stdexcept>
 #include "Timing.h"
 #include "Logger.h"
 

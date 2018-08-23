@@ -12,6 +12,7 @@
 // NOTE: order is important for correctly managing incremental levels of debug.
 #define FOREACH_DEBUG(DLEVEL) \
     DLEVEL(DEBUG) \
+    DLEVEL(COARSE_DEBUG) \
     DLEVEL(INFO) \
     DLEVEL(PRODUCTION) \
     DLEVEL(WARNING) \

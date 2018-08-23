@@ -7,6 +7,7 @@
 
 #include <random>
 #include <functional>
+#include <set>
 #include "CellData.h"
 #include "Logger.h"
 
@@ -27,7 +28,7 @@ private:
     std::uniform_int_distribution<int> rowDistribution, columnDistribution,
             rowOffsetDistribution, columnOffsetDistribution;
     Logger &logger;
-    unsigned short nextAvailableChainId;
+    ChainId nextAvailableChainId;
 
 public:
     Grid(int columns, int rows, Logger &logger);
@@ -62,15 +63,15 @@ public:
     
     void setElement(int i, int j, CellData &value);
     
-    int initializeInnerGridAs(ChemicalSpecies chemicalSpecies, Activity activity);
+    int initializeInnerGridAs(ChemicalProperties chemicalProperties, Flags flags=0);
     
-    int initializeGridRandomly(double randomRatio, ChemicalSpecies chemicalSpecies, Activity activity);
+    int initializeGridRandomly(double randomRatio, ChemicalProperties chemicalProperties, Flags flags=0);
     
-    int initializeGridWithSingleChain(ChemicalSpecies chemicalSpecies, Activity activity);
+    int initializeGridWithSingleChain(ChemicalProperties chemicalProperties, Flags flags=0);
     
-    int initializeGridWithTwoParallelChains(int distance, ChemicalSpecies chemicalSpecies, Activity activity);
+    int initializeGridWithTwoParallelChains(int distance, ChemicalProperties chemicalProperties, Flags flags=0);
     
-    int initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset, ChemicalSpecies chemicalSpecies, Activity activity);
+    int initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset, ChemicalProperties chemicalProperties, Flags flags=0);
     
     void pickRandomElement(int &i, int &j);
     
@@ -86,9 +87,14 @@ public:
         return getChemicalProperties(getElement(column, row));
     }
     
+    static inline ChemicalSpecies getChemicalSpecies(ChemicalProperties chemicalProperties)
+    {
+        return static_cast<ChemicalSpecies>((chemicalProperties >> SPECIES_BIT) & 1U);
+    }
+    
     static inline ChemicalSpecies getChemicalSpecies(CellData &cellData)
     {
-        return static_cast<ChemicalSpecies>((getChemicalProperties(cellData) >> SPECIES_BIT) & 1U);
+        return getChemicalSpecies(getChemicalProperties(cellData));
     }
     
     inline ChemicalSpecies getChemicalSpecies(int column, int row) const
@@ -96,19 +102,54 @@ public:
         return static_cast<ChemicalSpecies>((getChemicalProperties(column, row) >> SPECIES_BIT) & 1U);
     }
     
-    static inline bool isChromatine(CellData &cellData)
+    static inline bool isChromatin(ChemicalProperties chemicalProperties)
     {
-        return getChemicalSpecies(cellData) == CHROMATINE;
+        return getChemicalSpecies(chemicalProperties) == CHROMATIN;
+    }
+    
+    static inline bool isChromatin(CellData &cellData)
+    {
+        return isChromatin(getChemicalProperties(cellData));
+    }
+    
+    static inline bool isRBP(ChemicalProperties chemicalProperties)
+    {
+        return getChemicalSpecies(chemicalProperties) == RBP;
     }
     
     static inline bool isRBP(CellData &cellData)
     {
-        return getChemicalSpecies(cellData) == RBP;
+        return isRBP(getChemicalProperties(cellData));
+    }
+    
+    static inline bool isActive(ChemicalProperties chemicalProperties)
+    {
+        return ((chemicalProperties >> ACTIVE_BIT) & 1U) == ACTIVE;
     }
     
     static inline bool isActive(CellData &cellData)
     {
-        return ((getChemicalProperties(cellData) >> ACTIVE_BIT) & 1U) == ACTIVE;
+        return isActive(getChemicalProperties(cellData));
+    }
+    
+    static inline bool isActiveChromatin(ChemicalProperties chemicalProperties)
+    {
+        return isChromatin(chemicalProperties) && isActive(chemicalProperties);
+    }
+    
+    static inline bool isInactiveChromatin(ChemicalProperties chemicalProperties)
+    {
+        return isChromatin(chemicalProperties) && !isActive(chemicalProperties);
+    }
+    
+    static inline bool isActiveRBP(ChemicalProperties chemicalProperties)
+    {
+        return isRBP(chemicalProperties) && isActive(chemicalProperties);
+    }
+    
+    static inline bool isInactiveRBP(ChemicalProperties chemicalProperties)
+    {
+        return isRBP(chemicalProperties) && !isActive(chemicalProperties);
     }
     
     static inline Flags getFlags(CellData &cellData)
@@ -124,6 +165,11 @@ public:
     static inline bool isTranscribable(CellData &cellData)
     {
         return ((getFlags(cellData) >> TRANSCRIBABLE_BIT) & 1U) == TRANSCRIBABLE;
+    }
+    
+    static inline bool isTranscriptionInhibited(CellData &cellData)
+    {
+        return ((getFlags(cellData) >> TRANSCRIPTION_INHIBITION_BIT) & 1U) == TRANSCRIPTION_INHIBITED;
     }
     
     // This is used to check if a swap is meaningless, however this must not include a chain check!
@@ -150,20 +196,29 @@ public:
     
     static ChemicalProperties chemicalPropertiesOf(ChemicalSpecies species, Activity activity);
     
+    static void setFlags(Flags &target, Transcribability transcribability, TranscriptionInhibition inhibition);
     void setFlags(int column, int row, Flags flags);
     
+    static void setTranscribability(Flags &target, Transcribability transcribability);
     void setTranscribability(int column, int row, Transcribability transcribability);
+    
+    static void setTranscriptionInhibition(Flags &target, TranscriptionInhibition inhibition);
+    void setTranscriptionInhibition(int column, int row, TranscriptionInhibition inhibition);
+    
+    static Flags flagsOf(Transcribability transcribability, TranscriptionInhibition inhibition);
     
     // Set chain properties in the first slot available and return the index of the slot used
     size_t setChainProperties(int column, int row,
-                              unsigned short chainId, unsigned int position, unsigned int length);
+                              ChainId chainId, unsigned int position, unsigned int length);
     
     // Check cell of given coordinates and return chains it belongs to
     std::vector<std::reference_wrapper<ChainProperties>> chainsCellBelongsTo(int column, int row);
     
+    std::set<ChainId> chainsCellBelongsTo(CellData& cellData);
+    
     // Check if a given cell belongs to a chain with given Id
     // Returns position in chain properties array if found, MAX_CROSSING_CHAINS if not found
-    unsigned char cellBelongsToChain(int column, int row, unsigned short chainId);
+    unsigned char cellBelongsToChain(int column, int row, ChainId chainId);
     
     // Check if the cell with given coordinates is neighbour (in the given chain)
     // of the cell having the given chain properties.
@@ -179,7 +234,10 @@ public:
     {
         return chain.position == chain.chainLength - 1; // 0-based indexing...
     }
-
+    
+    bool doesAnyNeighbourMatchCondition(int column, int row,
+                                        bool (*condition)(CellData&));
+    
 private:
     void allocateGrid();
     
@@ -195,7 +253,7 @@ private:
     
     inline bool isPositionInChainPropertiesArrayValid(unsigned char position);
     
-    unsigned short getNewChainId();
+    ChainId getNewChainId();
     
     inline static bool getBit(unsigned char bitfield, unsigned char bit)
     {
