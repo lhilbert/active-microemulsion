@@ -121,6 +121,9 @@ private:
     bool performActivitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
     
     bool performTranscribabilitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
+    
+    void
+    setTranscriptionInhibitionOnChains(const std::set<ChainId> &targetChains, const TranscriptionInhibition &inhibition) const;
 };
 
 

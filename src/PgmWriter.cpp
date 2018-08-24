@@ -79,18 +79,18 @@ void PgmWriter::__write()
     // Create buffer for one row of *.pgm picture, including spaces and trailing newline.
     char *buffer = new char[2 * width + 1];
     // Now write one row of data into the buffer, then write it to file
-    for (int j = height; j > 0; j--)
+    for (int row = height; row > 0; row--)
     {
-        for (int i = 0; i <= 2 * width - 1; i += 2)
+        for (int column = 0; column <= 2 * width - 1; column += 2)
         {
-            ChemicalProperties chemicalProperties = data[(i / 2) + 1][j].chemicalProperties;
+            ChemicalProperties chemicalProperties = data[row][(column / 2) + 1].chemicalProperties;
             char character = 48; // ASCII '0' char
             if (signalMatcher(chemicalProperties))
             {
                 character = 49; // ASCII '1' char
             }
-            buffer[i] = character;
-            buffer[i + 1] = ' ';
+            buffer[column] = character;
+            buffer[column + 1] = ' ';
         }
         buffer[2 * width - 1] = '\n';
         // terminating the buffer as a proper c-string

@@ -12,6 +12,8 @@ int main(int argc, const char **argv)
 {
     std::string outputDir, inputImage;
     double endTime;
+    double cutoffTime = -1;
+    double cutoffTimeFraction = 1;
     int rows = 50, columns = 50; //todo: then read these from config
     int swapsPerPixelPerUnitTime = 500; //todo read this from config
     int numVisualizationOutputs = 100; //todo read this from config
@@ -27,11 +29,14 @@ int main(int argc, const char **argv)
             ("debug,d", "Enable the debug logging level")
             ("coarse-debug", "Enable the coarse_debug logging level")
             ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
+            ("no-chain-integrity", "Do not enforce chain integrity")
             ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
              "Specify the folder to use for output (log and data)")
             ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
              "Specify the image to be used as initial value for grid configuration")
             ("end-time,T", opt::value<double>(&endTime)->default_value(1e3), "End time for the simulation")
+            ("cutoff-time,C", opt::value<double>(&cutoffTime)->default_value(-1), "Time at which the chemical reaction cutoff takes place")
+            ("cutoff-time-fraction,c", opt::value<double>(&cutoffTimeFraction)->default_value(1), "Fraction of endTime at which the chemical reaction cutoff takes place")
             ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
             ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
             ("omega,w", opt::value<double>(&omega)->default_value(0.5),
@@ -63,6 +68,7 @@ int main(int argc, const char **argv)
     bool debugMode = varsMap.count("debug") > 0;
     bool coarseDebugMode = varsMap.count("coarse-debug") > 0;
     bool quietMode = varsMap.count("quiet") > 0;
+    bool enforceChainIntegrity = varsMap.count("no-chain-integrity") == 0;
 //    int endTime = argparser.retrieve<int>("end-time");
     //
     int numInnerCells = rows * columns;
@@ -77,6 +83,10 @@ int main(int argc, const char **argv)
     double dtChem = 0.1 / kMax;
     double dtOut =
             endTime / numVisualizationOutputs; // The dt used for visualization output. //todo read this from config
+    if (cutoffTime < 0)
+    {
+        cutoffTime = endTime / cutoffTimeFraction;
+    }
     
     // If output folder doesn't exist, create it
     if (!boost::filesystem::exists(outputDir))
@@ -108,6 +118,7 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(outputDir.data()));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(inputImage.data()));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%.2e", DUMP(endTime));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%.2e", DUMP(cutoffTime));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(rows));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(columns));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(swapsPerPixelPerUnitTime));
@@ -130,13 +141,21 @@ int main(int argc, const char **argv)
     //todo
     
     // Initialize data structures
+    std::set<ChainId> chainsInUse;
     Grid grid(columns, rows, logger);
 //    grid.initializeInnerGridAs(Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
 //                               Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
 //    grid.initializeGridRandomly(0.5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
     grid.initializeInnerGridAs(Grid::chemicalPropertiesOf(RBP, NOT_ACTIVE));
-    grid.initializeGridWithSingleChain(Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-                                       Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+    grid.initializeGridWithSingleChain(chainsInUse,
+            0, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+            Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE), enforceChainIntegrity);
+//    grid.initializeGridWithSingleChain(chainsInUse,
+//            10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//            Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_INHIBITED), enforceChainIntegrity);
+//    auto chainsToActivate = grid.initializeGridWithSingleChain(chainsInUse,
+//            -10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//            Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_INHIBITED), enforceChainIntegrity);
     grid.initializeGridWithTwoParallelChains(5, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
                                              Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
     grid.initializeGridWithTwoParallelChains(10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
@@ -160,10 +179,11 @@ int main(int argc, const char **argv)
 //    grid.initializeGridWithTwoOrthogonalChains(-5, -5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
 //    grid.initializeGridWithTwoOrthogonalChains(+5, +5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
     int numRbpCells = grid.getSpeciesCount(RBP);
-    int numChromatinCells = (rows * columns) - numRbpCells;
-    double speciesRatio = static_cast<double>(numRbpCells) / numChromatinCells;
+    int numChromatinCells = numInnerCells - numRbpCells;
+    double rbpRatio = static_cast<double>(numRbpCells) / numInnerCells;
+    double chromatinRatio = static_cast<double>(numChromatinCells) / numInnerCells;
     logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f", DUMP(numChromatinCells), DUMP(numRbpCells),
-                  DUMP(speciesRatio));
+                  DUMP(chromatinRatio), DUMP(rbpRatio));
     logger.logMsg(PRODUCTION, "Initializing microemulsion: %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f",
                   DUMP(dtChem), DUMP(kOn), DUMP(kOff), DUMP(kChromPlus), DUMP(kChromMinus), DUMP(kRnaPlus),
                   DUMP(kRnaMinus));
@@ -200,13 +220,16 @@ int main(int argc, const char **argv)
     unsigned long swapsPerformed = 0;
     unsigned long chemChangesPerformed = 0;
     logger.logEvent(INFO, t, "Entering main time-stepping loop");
+    bool cutoffTookPlace = false;
     while (t < endTime)
     {
         // Hack
-        if (t > endTime / 3)
+        if (t > cutoffTime && !cutoffTookPlace)
         {
             microemulsion.setKChromPlus(0);
 //            microemulsion.setKRnaMinus(0);
+//            microemulsion.enableTranscribabilityOnChains(chainsToActivate);
+            cutoffTookPlace = true;
         }
         // Time-stepping loop
         while (t < nextOutputTime)
@@ -243,21 +266,6 @@ int main(int argc, const char **argv)
         nextOutputTime += dtOut;
     }
     logger.logEvent(DEBUG, t, "Exiting main time-stepping loop");
-//    logger.logEvent(DEBUG, t, "%s=%f", DUMP(lastOutputTime));
-
-//    Below should not be required. //todo: remove this part if really useless
-//    // Final output, but make sure we didn't just write in the last iteration!
-//    if (t > nextOutputTime - dtOut)
-//    {
-//        logger.logEvent(PRODUCTION, t,
-//                        "Simulation summary: swapAttemps=%ld "
-//                        "| swapsPerformed=%ld "
-//                        "| swapRatio=%f",
-//                        swapAttempts, swapsPerformed, (double) swapsPerformed / swapAttempts);
-//        dnaWriter.write(t);
-//        rnaWriter.write(t);
-//        transcriptionWriter.write(t);
-//    }
     
     //
     return 0;

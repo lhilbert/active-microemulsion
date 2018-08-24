@@ -2,6 +2,7 @@
 // Created by tommaso on 08/08/18.
 //
 
+#include <algorithm>
 #include "Microemulsion.h"
 //#include <omp.h>
 
@@ -236,7 +237,7 @@ bool Microemulsion::isDiagonalSwapAllowedByChains(int x, int y, int nx, int ny,
     else if (!chains.empty())
     {
         isSwapAllowed = true;
-        for (auto& chain : chains)
+        for (auto &chain : chains)
         {
             if (!isSwapAllowedByChainNeighboursInDiagonalCase(x, y, dx, dy, chain))
             {
@@ -248,7 +249,7 @@ bool Microemulsion::isDiagonalSwapAllowedByChains(int x, int y, int nx, int ny,
     else if (!nChains.empty())
     {
         isSwapAllowed = true;
-        for (auto& chain : nChains)
+        for (auto &chain : nChains)
         {
             if (!isSwapAllowedByChainNeighboursInDiagonalCase(nx, ny, -dx, -dy, chain))
             {
@@ -271,7 +272,7 @@ bool Microemulsion::isHorizontalSwapAllowedByChains(int x, int y, int nx, int ny
     if (!chains.empty())
     {
         // Check if swap is ok for current cell
-        for (auto& chain : chains)
+        for (auto &chain : chains)
         {
             if (!isSwapAllowedByChainNeighboursInHorizontalCase(x, y, dx, chain))
             {
@@ -283,7 +284,7 @@ bool Microemulsion::isHorizontalSwapAllowedByChains(int x, int y, int nx, int ny
     if (!nChains.empty())
     {
         // Check if swap is ok for swap candidate
-        for (auto& nChain : nChains)
+        for (auto &nChain : nChains)
         {
             if (!isSwapAllowedByChainNeighboursInHorizontalCase(nx, ny, -dx, nChain))
             {
@@ -306,7 +307,7 @@ bool Microemulsion::isVerticalSwapAllowedByChains(int x, int y, int nx, int ny,
     if (!chains.empty())
     {
         // Check if swap is ok for current cell
-        for (auto& chain : chains)
+        for (auto &chain : chains)
         {
             if (!isSwapAllowedByChainNeighboursInVerticalCase(x, y, dy, chain))
             {
@@ -318,7 +319,7 @@ bool Microemulsion::isVerticalSwapAllowedByChains(int x, int y, int nx, int ny,
     if (!nChains.empty())
     {
         // Check if swap is ok for swap candidate
-        for (auto& chain : nChains)
+        for (auto &chain : nChains)
         {
             if (!isSwapAllowedByChainNeighboursInVerticalCase(nx, ny, -dy, chain))
             {
@@ -335,12 +336,11 @@ bool Microemulsion::isSwapAllowedByChainNeighboursInDiagonalCase(int x, int y, i
 {
     bool horizontalCheck = grid.isCellNeighbourInChain(x + dx, y, chainProperties);
     bool verticalCheck = grid.isCellNeighbourInChain(x, y + dy, chainProperties);
-    return ( horizontalCheck && verticalCheck )
+    return (horizontalCheck && verticalCheck)
            ||
-           ( grid.isLastOfChain(x,y,chainProperties)
-                && ( horizontalCheck || verticalCheck )
-                )
-            ;
+           (grid.isLastOfChain(x, y, chainProperties)
+            && (horizontalCheck || verticalCheck)
+           );
 }
 
 bool Microemulsion::isSwapAllowedByChainNeighboursInHorizontalCase(int x, int y, int dx,
@@ -353,7 +353,8 @@ bool Microemulsion::isSwapAllowedByChainNeighboursInHorizontalCase(int x, int y,
     bool isSwapAllowed = true;
     for (signed char k = -1; k <= 1; ++k)
     {
-        if (grid.isCellNeighbourInChain(x-dx, y+k, chainProperties)) // checking on x-dx ensures being on the complementary
+        if (grid.isCellNeighbourInChain(x - dx, y + k,
+                                        chainProperties)) // checking on x-dx ensures being on the complementary
         {
             isSwapAllowed = false;
             break;
@@ -372,7 +373,7 @@ bool Microemulsion::isSwapAllowedByChainNeighboursInVerticalCase(int x, int y, i
     bool isSwapAllowed = true;
     for (signed char k = -1; k <= 1; ++k)
     {
-        if (grid.isCellNeighbourInChain(x+k, y-dy, chainProperties))
+        if (grid.isCellNeighbourInChain(x + k, y - dy, chainProperties))
         {
             isSwapAllowed = false;
             break;
@@ -405,41 +406,42 @@ bool Microemulsion::performChemicalReaction(int column, int row)
         // Reaction for Chromatin
         bool isTranscribable = Grid::isTranscribable(cellData);
         isChemPropChanged = performActivitySwitchingReaction(cellData,
-                isTranscribable*kChromPlus, kChromMinus);
+                                                             isTranscribable * kChromPlus, kChromMinus);
         
         //todo: Check if the transcribability reaction is ok here or should be performed in a different place
         bool isTranscriptionAllowed = !Grid::isTranscriptionInhibited(cellData);
-        performTranscribabilitySwitchingReaction(cellData, isTranscriptionAllowed*kOn, kOff);
+        performTranscribabilitySwitchingReaction(cellData, isTranscriptionAllowed * kOn, kOff);
     }
     else if (Grid::isRBP(cellData))
     {
         // Reaction for RBP
         bool isInProximityOfTranscription =
                 grid.doesAnyNeighbourMatchCondition(column, row,
-                    [](CellData& cell) {
-                        return Grid::isChromatin(cell) && Grid::isActive(cell);
-                    }
+                                                    [](CellData &cell) {
+                                                        return Grid::isChromatin(cell) && Grid::isActive(cell);
+                                                    }
                 );
         //debug
         if (isInProximityOfTranscription)
         {
             logger.logMsg(COARSE_DEBUG, "Microemulsion::performChemicalReaction "
-                                 "Cell %s=%d, %s=%d is in proximity of transcription",
-                                 DUMP(column), DUMP(row));
+                                        "Cell %s=%d, %s=%d is in proximity of transcription",
+                          DUMP(column), DUMP(row));
         }
         //
         isChemPropChanged = performActivitySwitchingReaction(cellData,
-                isInProximityOfTranscription*kRnaPlus, kRnaMinus);
+                                                             isInProximityOfTranscription * kRnaPlus, kRnaMinus);
     }
     return isChemPropChanged;
 }
 
-bool Microemulsion::performActivitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus)
+bool
+Microemulsion::performActivitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus)
 {
     bool isSwitched = false;
     if (Grid::isActive(cellData))
     {
-        if (randomChoiceWithProbability(dtChem*reactionRateMinus))
+        if (randomChoiceWithProbability(dtChem * reactionRateMinus))
         {
             Grid::setActivity(cellData.chemicalProperties, NOT_ACTIVE);
             isSwitched = true;
@@ -447,7 +449,7 @@ bool Microemulsion::performActivitySwitchingReaction(CellData &cellData, double 
     }
     else
     {
-        if (randomChoiceWithProbability(dtChem*reactionRatePlus))
+        if (randomChoiceWithProbability(dtChem * reactionRatePlus))
         {
             Grid::setActivity(cellData.chemicalProperties, ACTIVE);
             isSwitched = true;
@@ -462,7 +464,7 @@ bool Microemulsion::performTranscribabilitySwitchingReaction(CellData &cellData,
     bool isSwitched = false;
     if (Grid::isTranscribable(cellData))
     {
-        if (randomChoiceWithProbability(dtChem*reactionRateMinus))
+        if (randomChoiceWithProbability(dtChem * reactionRateMinus))
         {
             Grid::setTranscribability(cellData.flags, NOT_TRANSCRIBABLE);
             isSwitched = true;
@@ -470,7 +472,7 @@ bool Microemulsion::performTranscribabilitySwitchingReaction(CellData &cellData,
     }
     else
     {
-        if (randomChoiceWithProbability(dtChem*reactionRatePlus))
+        if (randomChoiceWithProbability(dtChem * reactionRatePlus))
         {
             Grid::setTranscribability(cellData.flags, TRANSCRIBABLE);
             isSwitched = true;
@@ -521,14 +523,37 @@ void Microemulsion::setKRnaMinus(double kRnaMinus)
     Microemulsion::kRnaMinus = kRnaMinus;
 }
 
+void Microemulsion::setTranscriptionInhibitionOnChains(const std::set<ChainId> &targetChains,
+                                                       const TranscriptionInhibition &inhibition) const
+{
+    for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
+    {
+        for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
+        {
+            CellData &curCell = grid.getElement(column, row);
+            std::set<ChainId> curCellChains = grid.chainsCellBelongsTo(curCell);
+            std::set<ChainId> matches;
+            set_intersection(curCellChains.begin(), curCellChains.end(),
+                                  targetChains.begin(), targetChains.end(),
+                                  inserter(matches, matches.begin()));
+            if (!matches.empty())
+            {
+                Grid::setTranscriptionInhibition(curCell.flags, inhibition);
+            }
+        }
+    }
+}
+
 void Microemulsion::enableTranscribabilityOnChains(std::set<ChainId> targetChains)
 {
-    //todo!
+    logger.logMsg(PRODUCTION, "Transcription enabled on %d chains", targetChains.size());
+    setTranscriptionInhibitionOnChains(targetChains, TRANSCRIPTION_POSSIBLE);
 }
 
 void Microemulsion::disableTranscribabilityOnChains(std::set<ChainId> targetChains)
 {
-    //todo!
+    logger.logMsg(PRODUCTION, "Transcription inhibited on %d chains", targetChains.size());
+    setTranscriptionInhibitionOnChains(targetChains, TRANSCRIPTION_INHIBITED);
 }
 
 

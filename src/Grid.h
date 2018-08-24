@@ -57,21 +57,96 @@ public:
     
     const CellData **getData();
     
-    CellData &getElement(int i, int j);
+    CellData &getElement(int column, int row);
     
-    CellData &getElement(int i, int j) const;
+    CellData &getElement(int column, int row) const;
     
-    void setElement(int i, int j, CellData &value);
+    void setElement(int column, int row, CellData &value);
     
-    int initializeInnerGridAs(ChemicalProperties chemicalProperties, Flags flags=0);
+    int initializeInnerGridAs(ChemicalProperties chemicalProperties, Flags flags = 0);
     
-    int initializeGridRandomly(double randomRatio, ChemicalProperties chemicalProperties, Flags flags=0);
+    int initializeGridRandomly(double randomRatio, ChemicalProperties chemicalProperties, Flags flags = 0);
     
-    int initializeGridWithSingleChain(ChemicalProperties chemicalProperties, Flags flags=0);
+    /**
+     * Add a single horizontal chain of the specified characteristics to the grid.
+     * @param offsetFromCenter
+     * @param chemicalProperties
+     * @param flags
+     * @param enforceChainIntegrity
+     * @return A set containing the ID assigned to the new chain.
+     */
+    std::set<ChainId>
+    initializeGridWithSingleChain(int offsetFromCenter, ChemicalProperties chemicalProperties, Flags flags = 0,
+                                  bool enforceChainIntegrity = true);
     
-    int initializeGridWithTwoParallelChains(int distance, ChemicalProperties chemicalProperties, Flags flags=0);
+    /**
+     * Add a single horizontal chain of the specified characteristics to the grid.
+     * Extend a given chain id set with the id of the new chain.
+     * @param chainSet
+     * @param offsetFromCenter
+     * @param chemicalProperties
+     * @param flags
+     * @param enforceChainIntegrity
+     * @return A set containing the ID assigned to the new chain.
+     */
+    std::set<ChainId>
+    initializeGridWithSingleChain(std::set<ChainId> &chainSet,
+                                  int offsetFromCenter, ChemicalProperties chemicalProperties, Flags flags = 0,
+                                  bool enforceChainIntegrity = true);
     
-    int initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset, ChemicalProperties chemicalProperties, Flags flags=0);
+    /**
+     * Add a two horizontal chains of the specified characteristics, and with given distance, to the grid.
+     * @param distance
+     * @param chemicalProperties
+     * @param flags
+     * @param enforceChainIntegrity
+     * @return A set containing the IDs assigned to the new chains.
+     */
+    std::set<ChainId> initializeGridWithTwoParallelChains(int distance, ChemicalProperties chemicalProperties,
+                                                          Flags flags = 0, bool enforceChainIntegrity = true);
+    
+    /**
+     * Add a two horizontal chains of the specified characteristics, and with given distance, to the grid.
+     * Extend a given chain id set with the id of the new chain.
+     * @param chainSet
+     * @param distance
+     * @param chemicalProperties
+     * @param flags
+     * @param enforceChainIntegrity
+     * @return A set containing the IDs assigned to the new chains.
+     */
+    std::set<ChainId> initializeGridWithTwoParallelChains(std::set<ChainId> &chainSet,
+                                             int distance, ChemicalProperties chemicalProperties,
+                                             Flags flags = 0, bool enforceChainIntegrity = true);
+    
+    /**
+     * Add a horizontal and a vertical chains of the specified characteristics, crossing at the given point, to the grid.
+     * @param xOffset
+     * @param yOffset
+     * @param chemicalProperties
+     * @param flags
+     * @param enforceChainIntegrity
+     * @return A set containing the IDs assigned to the new chains.
+     */
+    std::set<ChainId> initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset,
+                                                            ChemicalProperties chemicalProperties, Flags flags = 0,
+                                                            bool enforceChainIntegrity = true);
+    
+    /**
+     * Add a horizontal and a vertical chains of the specified characteristics, crossing at the given point, to the grid.
+     * Extend a given chain id set with the id of the new chain.
+     * @param chainSet
+     * @param xOffset
+     * @param yOffset
+     * @param chemicalProperties
+     * @param flags
+     * @param enforceChainIntegrity
+     * @return A set containing the IDs assigned to the new chains.
+     */
+    std::set<ChainId> initializeGridWithTwoOrthogonalChains(std::set<ChainId> &chainSet,
+                                               int xOffset, int yOffset,
+                                               ChemicalProperties chemicalProperties, Flags flags = 0,
+                                               bool enforceChainIntegrity = true);
     
     void pickRandomElement(int &i, int &j);
     
@@ -179,30 +254,37 @@ public:
         CellData &cellData = getElement(column, row);
         CellData &nCellData = getElement(nColumn, nRow);
         return (getChemicalProperties(cellData) == getChemicalProperties(nCellData))
-            && (getFlags(cellData) == getFlags(nCellData));
+               && (getFlags(cellData) == getFlags(nCellData));
     }
     
     int getSpeciesCount(ChemicalSpecies chemicalSpecies);
     
     static void setChemicalSpecies(ChemicalProperties &target, ChemicalSpecies species);
+    
     void setChemicalSpecies(int column, int row, ChemicalSpecies species);
     
     static void setActivity(ChemicalProperties &target, Activity activity);
+    
     void setActivity(int column, int row, Activity activity);
     
     static void setChemicalProperties(ChemicalProperties &target, ChemicalSpecies species, Activity activity);
+    
     void setChemicalProperties(int column, int row, ChemicalSpecies species, Activity activity);
+    
     void setChemicalProperties(int column, int row, ChemicalProperties chemicalProperties);
     
     static ChemicalProperties chemicalPropertiesOf(ChemicalSpecies species, Activity activity);
     
     static void setFlags(Flags &target, Transcribability transcribability, TranscriptionInhibition inhibition);
+    
     void setFlags(int column, int row, Flags flags);
     
     static void setTranscribability(Flags &target, Transcribability transcribability);
+    
     void setTranscribability(int column, int row, Transcribability transcribability);
     
     static void setTranscriptionInhibition(Flags &target, TranscriptionInhibition inhibition);
+    
     void setTranscriptionInhibition(int column, int row, TranscriptionInhibition inhibition);
     
     static Flags flagsOf(Transcribability transcribability, TranscriptionInhibition inhibition);
@@ -214,7 +296,7 @@ public:
     // Check cell of given coordinates and return chains it belongs to
     std::vector<std::reference_wrapper<ChainProperties>> chainsCellBelongsTo(int column, int row);
     
-    std::set<ChainId> chainsCellBelongsTo(CellData& cellData);
+    std::set<ChainId> chainsCellBelongsTo(CellData &cellData);
     
     // Check if a given cell belongs to a chain with given Id
     // Returns position in chain properties array if found, MAX_CROSSING_CHAINS if not found
@@ -236,8 +318,8 @@ public:
     }
     
     bool doesAnyNeighbourMatchCondition(int column, int row,
-                                        bool (*condition)(CellData&));
-    
+                                        bool (*condition)(CellData &));
+
 private:
     void allocateGrid();
     
