@@ -31,21 +31,47 @@ Basic usage:
 ```
 Getting the help:
 ```
-./active-microemulsion --help
+./active-microemulsion --help                                                                                                                                                 [142351f]
 Supported options:
-  -h [ --help ]                    Show this help and exit
-  -d [ --debug ]                   Enable the debug logging level
-  -q [ --quiet ]                   Restrict logging to PRODUCTION,WARNING,ERROR
-                                   levels
-  -o [ --output-dir ] arg (=./Out) Specify the folder to use for output (log 
-                                   and data)
-  -i [ --input-image ] arg         Specify the image to be used as initial 
-                                   value for grid configuration
-  -T [ --end-time ] arg (=1000)    End time for the simulation
-  -W [ --width ] arg (=50)         Width of the simulation grid
-  -H [ --height ] arg (=50)        Height of the simulation grid
-  -w [ --omega ] arg (=0.5)        Energy cost for contiguity of non-affine 
-                                   species (omega model parameter)
-  -s [ --sppps ] arg (=333)        Number of average swap attempts per pixel 
-                                   per second
+  -h [ --help ]                         Show this help and exit
+  -d [ --debug ]                        Enable the debug logging level
+  --coarse-debug                        Enable the coarse_debug logging level
+  -q [ --quiet ]                        Restrict logging to PRODUCTION,WARNING,
+                                        ERROR levels
+  --no-chain-integrity                  Do not enforce chain integrity
+  --no-sticky-boundary                  Do not make boundary sticky to 
+                                        chromatin
+  -o [ --output-dir ] arg (=./Out)      Specify the folder to use for output 
+                                        (log and data)
+  -i [ --input-image ] arg              Specify the image to be used as initial
+                                        value for grid configuration
+  -T [ --end-time ] arg (=1000)         End time for the simulation
+  -C [ --cutoff-time ] arg (=-1)        Time at which the chemical reaction 
+                                        cutoff takes place
+  -c [ --cutoff-time-fraction ] arg (=1)
+                                        Fraction of endTime at which the 
+                                        chemical reaction cutoff takes place
+  -W [ --width ] arg (=50)              Width of the simulation grid
+  -H [ --height ] arg (=50)             Height of the simulation grid
+  -w [ --omega ] arg (=0.5)             Energy cost for contiguity of 
+                                        non-affine species (omega model 
+                                        parameter)
+  -s [ --sppps ] arg (=333)             Number of average swap attempts per 
+                                        pixel per second
+  --kOn arg (=0.00125)                  Reaction rate - Chromatin from 
+                                        non-transcribable to transcribable 
+                                        state
+  --kOff arg (=0.0025000000000000001)   Reaction rate - Chromatin from 
+                                        transcribable to non-transcribable 
+                                        state
+  --kChromPlus arg (=0.0066666666659999999)
+                                        Reaction rate - Transcription turned ON
+  --kChromMinus arg (=0.001666666666)   Reaction rate - Transcription turned 
+                                        OFF
+  --kRnaPlus arg (=0.0083333333329999992)
+                                        Reaction rate - RBP from free to bound 
+                                        state
+  --kRnaMinus arg (=0.00083333333330000002)
+                                        Reaction rate - RBP from bound to free 
+                                        state
 ```
