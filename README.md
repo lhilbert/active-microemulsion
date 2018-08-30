@@ -31,7 +31,7 @@ Basic usage:
 ```
 Getting the help:
 ```
-./active-microemulsion --help                                                                                                                                                 [142351f]
+./active-microemulsion --help
 Supported options:
   -h [ --help ]                         Show this help and exit
   -d [ --debug ]                        Enable the debug logging level
