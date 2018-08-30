@@ -11,6 +11,15 @@
 #include "CellData.h"
 #include "Logger.h"
 
+typedef struct Displacement
+{
+    signed char x;
+    signed char y;
+    
+    Displacement() : x(0), y(0)
+    {};
+} Displacement;
+
 /*
  * The Grid class represents a discretized domain with a regular grid.
  * It supports the allocation/destruction of the matrix, it retains the grid properties (e.g. index ranges) and
@@ -54,6 +63,8 @@ public:
     {
         return columns;
     }
+    
+    static void walkOnGrid(int &column, int &row, signed char colOffset, signed char rowOffset);
     
     const CellData **getData();
     
@@ -116,8 +127,8 @@ public:
      * @return A set containing the IDs assigned to the new chains.
      */
     std::set<ChainId> initializeGridWithTwoParallelChains(std::set<ChainId> &chainSet,
-                                             int distance, ChemicalProperties chemicalProperties,
-                                             Flags flags = 0, bool enforceChainIntegrity = true);
+                                                          int distance, ChemicalProperties chemicalProperties,
+                                                          Flags flags = 0, bool enforceChainIntegrity = true);
     
     /**
      * Add a horizontal and a vertical chains of the specified characteristics, crossing at the given point, to the grid.
@@ -144,9 +155,42 @@ public:
      * @return A set containing the IDs assigned to the new chains.
      */
     std::set<ChainId> initializeGridWithTwoOrthogonalChains(std::set<ChainId> &chainSet,
-                                               int xOffset, int yOffset,
-                                               ChemicalProperties chemicalProperties, Flags flags = 0,
-                                               bool enforceChainIntegrity = true);
+                                                            int xOffset, int yOffset,
+                                                            ChemicalProperties chemicalProperties, Flags flags = 0,
+                                                            bool enforceChainIntegrity = true);
+    
+    std::set<ChainId> initializeGridWithPiShapedTwoSegmentsChain(ChemicalProperties chemicalProperties, Flags flags = 0,
+                                                                 bool enforceChainIntegrity = true);
+    
+    std::set<ChainId> initializeGridWithPiShapedTwoSegmentsChain(std::set<ChainId> &chainSet,
+                                                                 ChemicalProperties chemicalProperties, Flags flags = 0,
+                                                                 bool enforceChainIntegrity = true);
+    
+//    std::set<ChainId>
+//    initializeGridWith3WaySegmentedChain(int offsetFromCenter, int startColumn, int endColumn,
+//                                         ChemicalProperties chemicalPropertiesA,
+//                                         ChemicalProperties chemicalPropertiesB,
+//                                         Flags flags = 0,
+//                                         bool enforceChainIntegrity = true);
+//
+//    std::set<ChainId> initializeGridWith3WaySegmentedChain(std::set<ChainId> &chainSet,
+//                                                           int offsetFromCenter,
+//                                                           ChemicalProperties chemicalPropertiesA,
+//                                                           ChemicalProperties chemicalPropertiesB,
+//                                                           Flags flags = 0,
+//                                                           bool enforceChainIntegrity = true);
+    
+    std::set<ChainId>
+    initializeGridWithStepInstructions(int &column, int &row, std::vector<Displacement> steps,
+                                       ChemicalProperties chemicalProperties,
+                                       Flags flags = 0,
+                                       bool enforceChainIntegrity = true);
+    
+    std::set<ChainId> initializeGridWithStepInstructions(std::set<ChainId> &chainSet,
+                                                         int &column, int &row, std::vector<Displacement> steps,
+                                                         ChemicalProperties chemicalProperties,
+                                                         Flags flags = 0,
+                                                         bool enforceChainIntegrity = true);
     
     void pickRandomElement(int &i, int &j);
     
@@ -174,7 +218,7 @@ public:
     
     inline ChemicalSpecies getChemicalSpecies(int column, int row) const
     {
-        return static_cast<ChemicalSpecies>((getChemicalProperties(column, row) >> SPECIES_BIT) & 1U);
+        return getChemicalSpecies(getChemicalProperties(column, row));
     }
     
     static inline bool isChromatin(ChemicalProperties chemicalProperties)
@@ -185,6 +229,11 @@ public:
     static inline bool isChromatin(CellData &cellData)
     {
         return isChromatin(getChemicalProperties(cellData));
+    }
+    
+    inline bool isChromatin(int column, int row)
+    {
+        return isChromatin(getElement(column, row));
     }
     
     static inline bool isRBP(ChemicalProperties chemicalProperties)
@@ -215,6 +264,11 @@ public:
     static inline bool isInactiveChromatin(ChemicalProperties chemicalProperties)
     {
         return isChromatin(chemicalProperties) && !isActive(chemicalProperties);
+    }
+    
+    inline bool isInactiveChromatin(int column, int row)
+    {
+        return isInactiveChromatin(getElement(column, row).chemicalProperties);
     }
     
     static inline bool isActiveRBP(ChemicalProperties chemicalProperties)
@@ -319,6 +373,8 @@ public:
     
     bool doesAnyNeighbourMatchCondition(int column, int row,
                                         bool (*condition)(CellData &));
+    
+    bool isPositionNextToBoundary(int column, int row);
 
 private:
     void allocateGrid();
@@ -347,6 +403,10 @@ private:
         // Set the SPECIES_BIT to the species value
         bitfield ^= (-value ^ bitfield) & (1U << bit);
     }
+    
+    void initializeCellProperties(int column, int row, ChemicalProperties chemicalProperties, Flags flags,
+                                  bool enforceChainIntegrity, ChainId chainId, unsigned int chainLength,
+                                  unsigned int position);
 };
 
 

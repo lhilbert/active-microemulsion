@@ -6,14 +6,8 @@
 #include "Microemulsion.h"
 //#include <omp.h>
 
-Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger,
-                             double deltaTChem,
-                             double kOn,
-                             double kOff,
-                             double kChromPlus,
-                             double kChromMinus,
-                             double kRnaPlus,
-                             double kRnaMinus)
+Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double deltaTChem, double kOn, double kOff,
+                             double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus, bool isBoundarySticky)
         : grid(grid), logger(logger), omega(omega),
           uniformProbabilityDistribution(0.0, 1.0),
           dtChem(deltaTChem),
@@ -22,7 +16,8 @@ Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger,
           kChromPlus(kChromPlus),
           kChromMinus(kChromMinus),
           kRnaPlus(kRnaPlus),
-          kRnaMinus(kRnaMinus)
+          kRnaMinus(kRnaMinus),
+          isBoundarySticky(isBoundarySticky)
 {
     deltaEmin = -10 * fabs(omega);
     randomGenerator.seed(std::random_device()());
@@ -35,13 +30,23 @@ bool Microemulsion::performRandomSwap()
     grid.pickRandomElement(x, y);
     grid.pickRandomNeighbourOf(x, y, nx, ny);
     
-    //Here we check if swap allowed by chains, if not we just return.
+    // Here we check if swap allowed by chains, if not we just return.
     if (!isSwapAllowedByChainsAndMeaningful(x, y, nx, ny))
     {
         logger.logMsg(DEBUG, "Microemulsion::performRandomSwap - Swap not allowed by chains! "
                              "(x=%d, y=%d) <-> (nx=%d, ny=%d)", x, y, nx, ny);
         return false;
     }
+    
+    // Here we check if we are nearby the domain boundary and if we need to "stick" to it.
+    if (isBoundarySticky && isSwapBlockedByStickyBoundary(x, y))
+    {
+        //todo: should we inhibit transcription on chromatin that sticks to the boundary?
+        logger.logMsg(DEBUG, "Microemulsion::performRandomSwap - Swap not allowed by sticky boundary! "
+                             "(x=%d, y=%d) <-> (nx=%d, ny=%d)", x, y, nx, ny);
+        return false;
+    }
+    
     // If chains allow the swap, then we check the energy required for it
     // and we compute its probability
     double preEnergy = computePartialDifferentialEnergy(x, y, nx, ny);
@@ -554,6 +559,12 @@ void Microemulsion::disableTranscribabilityOnChains(std::set<ChainId> targetChai
 {
     logger.logMsg(PRODUCTION, "Transcription inhibited on %d chains", targetChains.size());
     setTranscriptionInhibitionOnChains(targetChains, TRANSCRIPTION_INHIBITED);
+}
+
+bool Microemulsion::isSwapBlockedByStickyBoundary(int x, int y)
+{
+    // todo: check if this has to be applied to all chromatin or just to inactive one!
+    return grid.isPositionNextToBoundary(x, y) && grid.isInactiveChromatin(x, y);
 }
 
 

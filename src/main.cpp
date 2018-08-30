@@ -30,13 +30,16 @@ int main(int argc, const char **argv)
             ("coarse-debug", "Enable the coarse_debug logging level")
             ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
             ("no-chain-integrity", "Do not enforce chain integrity")
+            ("no-sticky-boundary", "Do not make boundary sticky to chromatin")
             ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
              "Specify the folder to use for output (log and data)")
             ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
              "Specify the image to be used as initial value for grid configuration")
             ("end-time,T", opt::value<double>(&endTime)->default_value(1e3), "End time for the simulation")
-            ("cutoff-time,C", opt::value<double>(&cutoffTime)->default_value(-1), "Time at which the chemical reaction cutoff takes place")
-            ("cutoff-time-fraction,c", opt::value<double>(&cutoffTimeFraction)->default_value(1), "Fraction of endTime at which the chemical reaction cutoff takes place")
+            ("cutoff-time,C", opt::value<double>(&cutoffTime)->default_value(-1),
+             "Time at which the chemical reaction cutoff takes place")
+            ("cutoff-time-fraction,c", opt::value<double>(&cutoffTimeFraction)->default_value(1),
+             "Fraction of endTime at which the chemical reaction cutoff takes place")
             ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
             ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
             ("omega,w", opt::value<double>(&omega)->default_value(0.5),
@@ -69,6 +72,7 @@ int main(int argc, const char **argv)
     bool coarseDebugMode = varsMap.count("coarse-debug") > 0;
     bool quietMode = varsMap.count("quiet") > 0;
     bool enforceChainIntegrity = varsMap.count("no-chain-integrity") == 0;
+    bool stickyBoundary = varsMap.count("no-sticky-boundary") == 0;
 //    int endTime = argparser.retrieve<int>("end-time");
     //
     int numInnerCells = rows * columns;
@@ -138,7 +142,7 @@ int main(int argc, const char **argv)
     
     // Config-file parser
     //logger.logMsg(PRODUCTION, "Reading configuration");
-    //todo
+    //todo Actually support config files
     
     // Initialize data structures
     std::set<ChainId> chainsInUse;
@@ -147,33 +151,41 @@ int main(int argc, const char **argv)
 //                               Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
 //    grid.initializeGridRandomly(0.5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
     grid.initializeInnerGridAs(Grid::chemicalPropertiesOf(RBP, NOT_ACTIVE));
-    grid.initializeGridWithSingleChain(chainsInUse,
-            0, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-            Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE), enforceChainIntegrity);
+    
+    std::set<ChainId> chainsToInhibit;
+    grid.initializeGridWithPiShapedTwoSegmentsChain(chainsInUse,
+                                                    Grid::chemicalPropertiesOf(CHROMATIN, ACTIVE),
+                                                    Grid::flagsOf(TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE),
+                                                    enforceChainIntegrity);
+    chainsToInhibit.insert(*chainsInUse.rbegin());
+
+    //    grid.initializeGridWithSingleChain(chainsInUse,
+//            0, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//            Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE), enforceChainIntegrity);
 //    grid.initializeGridWithSingleChain(chainsInUse,
 //            10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
 //            Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_INHIBITED), enforceChainIntegrity);
 //    auto chainsToActivate = grid.initializeGridWithSingleChain(chainsInUse,
 //            -10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
 //            Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_INHIBITED), enforceChainIntegrity);
-    grid.initializeGridWithTwoParallelChains(5, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-    grid.initializeGridWithTwoParallelChains(10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-    grid.initializeGridWithTwoParallelChains(15, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-    grid.initializeGridWithTwoParallelChains(20, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-    grid.initializeGridWithTwoParallelChains(25, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-    grid.initializeGridWithTwoParallelChains(30, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-    grid.initializeGridWithTwoParallelChains(35, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-    grid.initializeGridWithTwoParallelChains(40, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-    grid.initializeGridWithTwoParallelChains(45, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoParallelChains(5, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoParallelChains(10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoParallelChains(15, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoParallelChains(20, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoParallelChains(25, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoParallelChains(30, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoParallelChains(35, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoParallelChains(40, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
+//    grid.initializeGridWithTwoParallelChains(45, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
+//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
 //    grid.initializeGridWithTwoOrthogonalChains(0, 0, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
 //                                               Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
 //    grid.initializeGridWithTwoOrthogonalChains(-5, -5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
@@ -188,7 +200,7 @@ int main(int argc, const char **argv)
                   DUMP(dtChem), DUMP(kOn), DUMP(kOff), DUMP(kChromPlus), DUMP(kChromMinus), DUMP(kRnaPlus),
                   DUMP(kRnaMinus));
     Microemulsion microemulsion(grid, omega, logger,
-                                dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus);
+                                dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, stickyBoundary);
     
     // Initialize PgmWriters for the 3 channels
     PgmWriter dnaWriter(logger, columns, rows, outputDir + "/microemulsion_DNA", "DNA",
@@ -223,12 +235,13 @@ int main(int argc, const char **argv)
     bool cutoffTookPlace = false;
     while (t < endTime)
     {
-        // Hack
         if (t > cutoffTime && !cutoffTookPlace)
         {
-            microemulsion.setKChromPlus(0);
+            // Here perform the cutoff conditions //todo: make this configurable in some way
+//            microemulsion.setKChromPlus(0);
 //            microemulsion.setKRnaMinus(0);
 //            microemulsion.enableTranscribabilityOnChains(chainsToActivate);
+            microemulsion.disableTranscribabilityOnChains(chainsToInhibit);
             cutoffTookPlace = true;
         }
         // Time-stepping loop
@@ -251,7 +264,7 @@ int main(int argc, const char **argv)
         logger.logEvent(PRODUCTION, t,
                         "Simulation summary: %s=%ld "
                         "| %s=%ld "
-                        "| swapRatio=%f"
+                        "| swapRatio=%f "
                         "| %s=%ld ",
                         DUMP(swapAttempts), DUMP(swapsPerformed),
                         (double) swapsPerformed / swapAttempts,

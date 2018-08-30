@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by tommaso on 03/08/18.
 //
@@ -155,6 +157,44 @@ std::set<ChainId> Grid::initializeGridWithSingleChain(int offsetFromCenter, Chem
     return newChains;
 }
 
+//std::set<ChainId> Grid::initializeGridWith3WaySegmentedChain(int offsetFromCenter, int startColumn, int endColumn,
+//                                                             ChemicalProperties chemicalPropertiesA,
+//                                                             ChemicalProperties chemicalPropertiesB,
+//                                                             Flags flags,
+//                                                             bool enforceChainIntegrity)
+//{
+////    logger.logMsg(PRODUCTION, "Initializing grid with horizontal 3way-segmented chain");
+//    std::set<ChainId> newChains;
+////
+////    int chainRow = (rows / 2) + offsetFromCenter;
+////    ChainId chainId1 = 0;
+////    ChainId chainId2 = 0;
+////    ChainId chainId3 = 0;
+////    if (enforceChainIntegrity)
+////    {
+////        chainId1 = getNewChainId();
+////        newChains.insert(chainId1);
+////        chainId2 = getNewChainId();
+////        newChains.insert(chainId2);
+////        chainId3 = getNewChainId();
+////        newChains.insert(chainId3);
+////    }
+////
+////    int le
+////    for (int column = 1; column <= columns; ++column)
+////    {
+////        setChemicalProperties(column, chainRow, chemicalProperties);
+////        setFlags(column, chainRow, flags);
+////        if (enforceChainIntegrity)
+////        {
+////            setChainProperties(column, chainRow, chainId1,
+////                               static_cast<unsigned int>(column - 1),
+////                               (unsigned int) rows);
+////        }
+////    }
+//    return newChains;
+//}
+
 std::set<ChainId> Grid::initializeGridWithTwoParallelChains(int distance, ChemicalProperties chemicalProperties,
                                                             Flags flags,
                                                             bool enforceChainIntegrity)
@@ -209,7 +249,8 @@ std::set<ChainId> Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int y
         chainId1 = getNewChainId();
         newChains.insert(chainId1);
         chainId2 = getNewChainId();
-        newChains.insert(chainId2);    }
+        newChains.insert(chainId2);
+    }
     
     for (int row = 1; row <= rows; ++row)
     {
@@ -238,29 +279,172 @@ std::set<ChainId> Grid::initializeGridWithTwoOrthogonalChains(int xOffset, int y
     return newChains;
 }
 
+std::set<ChainId> Grid::initializeGridWithPiShapedTwoSegmentsChain(ChemicalProperties chemicalProperties, Flags flags,
+                                                                   bool enforceChainIntegrity)
+{
+    logger.logMsg(PRODUCTION, "Initializing grid with \"pi\" shaped chain subdivided in 2 domains");
+    std::set<ChainId> newChains;
+    
+    int startRow = rows / 10, endRow = rows + 1 - startRow;
+    int startColumn = columns / 3, endColumn = columns + 1 - startColumn;
+    int sharedColumn = startColumn + (endColumn - startColumn + 1) / 2;
+    int chain1Length = (endRow - startRow) + (sharedColumn - startColumn) + 1;
+    int chain2Length = (endRow - startRow) + (endColumn - sharedColumn) + 1;
+    ChainId chainId1 = 0;
+    ChainId chainId2 = 0;
+    if (enforceChainIntegrity)
+    {
+        chainId1 = getNewChainId();
+        newChains.insert(chainId1);
+        chainId2 = getNewChainId();
+        newChains.insert(chainId2);
+    }
+    
+    int chain1Counter = 0, chain2Counter = 0;
+    for (int row = startRow; row < endRow; ++row)
+    {
+        setChemicalProperties(startColumn, row, chemicalProperties);
+        setFlags(startColumn, row, flags);
+        setChemicalProperties(endColumn, row, chemicalProperties);
+        setFlags(endColumn, row, flags);
+        if (enforceChainIntegrity)
+        {
+            setChainProperties(startColumn, row, chainId1,
+                               static_cast<unsigned int>(chain1Counter),
+                               static_cast<unsigned int>(chain1Length));
+            ++chain1Counter;
+            setChainProperties(endColumn, row, chainId2,
+                               static_cast<unsigned int>(chain2Counter),
+                               static_cast<unsigned int>(chain2Length));
+            ++chain2Counter;
+        }
+    }
+    for (int column = startColumn; column <= sharedColumn; ++column)
+    {
+        setChemicalProperties(column, endRow, chemicalProperties);
+        setFlags(column, endRow, flags);
+        if (enforceChainIntegrity)
+        {
+            setChainProperties(column, endRow, chainId1,
+                               static_cast<unsigned int>(chain1Counter),
+                               static_cast<unsigned int>(chain1Length));
+            ++chain1Counter;
+        }
+    }
+    for (int column = endColumn; column >= sharedColumn; --column)
+    {
+        setChemicalProperties(column, endRow, chemicalProperties);
+        setFlags(column, endRow, flags);
+        if (enforceChainIntegrity)
+        {
+            setChainProperties(column, endRow, chainId2,
+                               static_cast<unsigned int>(chain2Counter),
+                               static_cast<unsigned int>(chain2Length));
+            ++chain2Counter;
+        }
+    }
+    if (chain1Length != chain1Counter || chain2Length != chain2Counter)
+    {
+        logger.logMsg(ERROR,
+                      "BUG! Grid::initializeGridWithPiShapedTwoSegmentsChain did not compute chain length correctly! "
+                      "%s=%d, %s=%d, %s=%d, %s=%d",
+                      DUMP(chain1Length), DUMP(chain1Counter),
+                      DUMP(chain2Length), DUMP(chain2Counter));
+        logger.flush();
+        throw std::runtime_error("BUG! Grid::initializeGridWithPiShapedTwoSegmentsChain did not compute "
+                                 "chain length correctly!");
+    }
+    return newChains;
+}
+
+std::set<ChainId> Grid::initializeGridWithStepInstructions(int &column, int &row, std::vector<Displacement> steps,
+                                                           ChemicalProperties chemicalProperties, Flags flags,
+                                                           bool enforceChainIntegrity)
+{
+    logger.logMsg(PRODUCTION, "Initializing chain with step-by-step instructions");
+    std::set<ChainId> newChains;
+    
+    ChainId chainId = 0;
+    if (enforceChainIntegrity)
+    {
+        chainId = getNewChainId();
+        newChains.insert(chainId);
+    }
+    
+    unsigned int chainLength = static_cast<unsigned int>(steps.size() + 1);
+    unsigned int position = 0;
+    initializeCellProperties(column, row, chemicalProperties, flags, enforceChainIntegrity,
+                             chainId, chainLength, position);
+    for (Displacement step : steps)
+    {
+        ++position;
+        walkOnGrid(column, row, step.x, step.y);
+        initializeCellProperties(column, row, chemicalProperties, flags, enforceChainIntegrity,
+                                 chainId, chainLength, position);
+    }
+    
+    return newChains;
+}
+
+void Grid::initializeCellProperties(int column, int row, ChemicalProperties chemicalProperties, Flags flags,
+                                    bool enforceChainIntegrity, ChainId chainId, unsigned int chainLength,
+                                    unsigned int position)
+{
+    setChemicalProperties(column, row, chemicalProperties);
+    setFlags(column, row, flags);
+    if (enforceChainIntegrity)
+    {
+        setChainProperties(column, row, chainId, position, chainLength);
+    }
+}
+
 std::set<ChainId> Grid::initializeGridWithSingleChain(std::set<ChainId> &chainSet, int offsetFromCenter,
                                                       ChemicalProperties chemicalProperties, Flags flags,
                                                       bool enforceChainIntegrity)
 {
-    std::set<ChainId> tmpSet = initializeGridWithSingleChain(offsetFromCenter, chemicalProperties, flags, enforceChainIntegrity);
+    std::set<ChainId> tmpSet = initializeGridWithSingleChain(offsetFromCenter, chemicalProperties, flags,
+                                                             enforceChainIntegrity);
     chainSet.insert(tmpSet.begin(), tmpSet.end());
     return tmpSet;
 }
 
 std::set<ChainId> Grid::initializeGridWithTwoParallelChains(std::set<ChainId> &chainSet, int distance,
-                                               ChemicalProperties chemicalProperties, Flags flags,
-                                               bool enforceChainIntegrity)
+                                                            ChemicalProperties chemicalProperties, Flags flags,
+                                                            bool enforceChainIntegrity)
 {
-    std::set<ChainId> tmpSet = initializeGridWithTwoParallelChains(distance, chemicalProperties, flags, enforceChainIntegrity);
+    std::set<ChainId> tmpSet = initializeGridWithTwoParallelChains(distance, chemicalProperties, flags,
+                                                                   enforceChainIntegrity);
     chainSet.insert(tmpSet.begin(), tmpSet.end());
     return tmpSet;
 }
 
 std::set<ChainId> Grid::initializeGridWithTwoOrthogonalChains(std::set<ChainId> &chainSet, int xOffset, int yOffset,
-                                                 ChemicalProperties chemicalProperties, Flags flags,
-                                                 bool enforceChainIntegrity)
+                                                              ChemicalProperties chemicalProperties, Flags flags,
+                                                              bool enforceChainIntegrity)
 {
-    std::set<ChainId> tmpSet = initializeGridWithTwoOrthogonalChains(xOffset, yOffset, chemicalProperties, flags, enforceChainIntegrity);
+    std::set<ChainId> tmpSet = initializeGridWithTwoOrthogonalChains(xOffset, yOffset, chemicalProperties, flags,
+                                                                     enforceChainIntegrity);
+    chainSet.insert(tmpSet.begin(), tmpSet.end());
+    return tmpSet;
+}
+
+std::set<ChainId>
+Grid::initializeGridWithPiShapedTwoSegmentsChain(std::set<ChainId> &chainSet, ChemicalProperties chemicalProperties,
+                                                 Flags flags, bool enforceChainIntegrity)
+{
+    std::set<ChainId> tmpSet = initializeGridWithPiShapedTwoSegmentsChain(chemicalProperties, flags,
+                                                                          enforceChainIntegrity);
+    chainSet.insert(tmpSet.begin(), tmpSet.end());
+    return tmpSet;
+}
+
+std::set<ChainId> Grid::initializeGridWithStepInstructions(std::set<ChainId> &chainSet, int &column, int &row,
+                                                           std::vector<Displacement> steps,
+                                                           ChemicalProperties chemicalProperties, Flags flags,
+                                                           bool enforceChainIntegrity)
+{
+    std::set<ChainId> tmpSet = initializeGridWithStepInstructions(column, row, std::move(steps), chemicalProperties,
+                                                                  flags, enforceChainIntegrity);
     chainSet.insert(tmpSet.begin(), tmpSet.end());
     return tmpSet;
 }
@@ -495,4 +679,16 @@ bool Grid::doesAnyNeighbourMatchCondition(int column, int row, bool (*condition)
            || condition(getElement(column - 1, row + 1))
            || condition(getElement(column, row + 1))
            || condition(getElement(column + 1, row + 1));
+}
+
+bool Grid::isPositionNextToBoundary(int column, int row)
+{
+    return column == getFirstColumn() || column == getLastColumn()
+           || row == getFirstRow() || row == getLastRow();
+}
+
+void Grid::walkOnGrid(int &column, int &row, signed char colOffset, signed char rowOffset)
+{
+    column += colOffset;
+    row += rowOffset;
 }

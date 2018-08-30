@@ -1,5 +1,6 @@
 CC = g++
 CFLAGS = -std=c++14 -O2 -Wall -pedantic -Werror -fopenmp
+#CFLAGS = -std=c++14 -O2 -Wall -pedantic -Werror -fopenmp -pg # Profiling only
 LIBS = -lboost_program_options -lboost_system -lboost_filesystem -lm
 
 OBJ = src/main.o \

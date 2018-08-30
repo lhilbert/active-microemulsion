@@ -9,6 +9,7 @@
 #include "Logger.h"
 #include <cmath>
 #include <functional>
+#include <random>
 
 class Microemulsion
 {
@@ -19,16 +20,11 @@ private:
     std::mt19937_64 randomGenerator;
     std::uniform_real_distribution<double> uniformProbabilityDistribution;
     double dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus;
+    bool isBoundarySticky;
 
 public:
-    Microemulsion(Grid &grid, double omega, Logger &logger,
-                  double deltaTChem,
-                  double kOn,
-                  double kOff,
-                  double kChromPlus,
-                  double kChromMinus,
-                  double kRnaPlus,
-                  double kRnaMinus);
+    Microemulsion(Grid &grid, double omega, Logger &logger, double deltaTChem, double kOn, double kOff,
+                      double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus, bool isBoundarySticky);
     
     void setDtChem(double dtChem);
     
@@ -93,6 +89,8 @@ private:
     {
         return (uniformProbabilityDistribution(randomGenerator) < probability);
     }
+    
+    bool isSwapBlockedByStickyBoundary(int x, int y);
     
     bool isSwapAllowedByChainsAndMeaningful(int x, int y, int nx, int ny);
     
