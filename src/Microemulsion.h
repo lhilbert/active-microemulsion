@@ -66,6 +66,9 @@ public:
     void enableTranscribabilityOnChains(std::set<ChainId> targetChains);
     
     void disableTranscribabilityOnChains(std::set<ChainId> targetChains);
+    
+    void
+    setTranscriptionInhibitionOnChains(const std::set<ChainId> &targetChains, const TranscriptionInhibition &inhibition) const;
 
 private:
     double computePartialDifferentialEnergy(int x, int y, int nx, int ny);
@@ -90,7 +93,7 @@ private:
         return (uniformProbabilityDistribution(randomGenerator) < probability);
     }
     
-    bool isSwapBlockedByStickyBoundary(int x, int y);
+    bool isSwapBlockedByStickyBoundary(int x, int y, int nx, int ny);
     
     bool isSwapAllowedByChainsAndMeaningful(int x, int y, int nx, int ny);
     
@@ -119,9 +122,6 @@ private:
     bool performActivitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
     
     bool performTranscribabilitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
-    
-    void
-    setTranscriptionInhibitionOnChains(const std::set<ChainId> &targetChains, const TranscriptionInhibition &inhibition) const;
 };
 
 

@@ -3,6 +3,7 @@
 #include "Grid.h"
 #include "Microemulsion.h"
 #include "PgmWriter.h"
+#include "ChainConfig.h"
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
@@ -10,7 +11,7 @@ namespace opt = boost::program_options;
 
 int main(int argc, const char **argv)
 {
-    std::string outputDir, inputImage;
+    std::string outputDir, inputImage, inputChainsFile;
     double endTime;
     double cutoffTime = -1;
     double cutoffTimeFraction = 1;
@@ -31,10 +32,14 @@ int main(int argc, const char **argv)
             ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
             ("no-chain-integrity", "Do not enforce chain integrity")
             ("no-sticky-boundary", "Do not make boundary sticky to chromatin")
+            ("flavopiridol", "Apply Flavopiridol at cutoff time")
+            ("actinomycin-D", "Apply Actinomycin D at cutoff time")
             ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
              "Specify the folder to use for output (log and data)")
             ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
              "Specify the image to be used as initial value for grid configuration")
+            ("chains-config,P", opt::value<std::string>(&inputChainsFile)->default_value("testConfig.chains"),
+             "Specify the chains config file to be used for grid configuration")
             ("end-time,T", opt::value<double>(&endTime)->default_value(1e3), "End time for the simulation")
             ("cutoff-time,C", opt::value<double>(&cutoffTime)->default_value(-1),
              "Time at which the chemical reaction cutoff takes place")
@@ -73,6 +78,8 @@ int main(int argc, const char **argv)
     bool quietMode = varsMap.count("quiet") > 0;
     bool enforceChainIntegrity = varsMap.count("no-chain-integrity") == 0;
     bool stickyBoundary = varsMap.count("no-sticky-boundary") == 0;
+    bool flavopiridol = varsMap.count("flavopiridol") == 0;
+    bool actinomycinD = varsMap.count("actinomycin-D") == 0;
 //    int endTime = argparser.retrieve<int>("end-time");
     //
     int numInnerCells = rows * columns;
@@ -118,9 +125,15 @@ int main(int argc, const char **argv)
     // Logging parameters for this run
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: Debug level set to %s", logger.getDebugLevelStr());
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(debugMode));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(coarseDebugMode));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(quietMode));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(enforceChainIntegrity));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(stickyBoundary));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(flavopiridol));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(actinomycinD));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(outputDir.data()));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(inputImage.data()));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(inputChainsFile.data()));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%.2e", DUMP(endTime));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%.2e", DUMP(cutoffTime));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(rows));
@@ -144,58 +157,39 @@ int main(int argc, const char **argv)
     //logger.logMsg(PRODUCTION, "Reading configuration");
     //todo Actually support config files
     
-    // Initialize data structures
-    std::set<ChainId> chainsInUse;
+    // Initialize data structures...
+    logger.logMsg(PRODUCTION, "Reading polymeric chains configuration");
+    std::set<ChainId> allChains, cutoffChains;
     Grid grid(columns, rows, logger);
-//    grid.initializeInnerGridAs(Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                               Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridRandomly(0.5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
     grid.initializeInnerGridAs(Grid::chemicalPropertiesOf(RBP, NOT_ACTIVE));
+    // ...and read chains configuration
+    ChainConfig chainConfig(logger);
+    std::ifstream chainConfigFile(inputChainsFile);
+    while (chainConfigFile >> chainConfig)
+    {
+        const std::map<std::string, unsigned char> &chainProperties = chainConfig.getChainProperties();
+        int column = chainConfig.getStartCol(), row = chainConfig.getStartRow();
+        ChemicalProperties chemicalProperties = Grid::chemicalPropertiesOf(CHROMATIN,
+                                                                           static_cast<Activity>(chainConfig.isActive()));
+        Flags flags = Grid::flagsOf(static_cast<Transcribability>(chainConfig.isTranscribable()),
+                                    static_cast<TranscriptionInhibition>(!chainConfig.isInhibited()));
+        auto newChain = grid.initializeGridWithStepInstructions(allChains, column, row, chainConfig.getSteps(),
+                                                                chemicalProperties, flags);
+        
+        auto pos = chainProperties.find("Cutoff");
+        if (pos != chainProperties.end() && pos->second != 0)
+        {
+            cutoffChains.insert(newChain.begin(), newChain.end());
+        }
+    }
     
-    std::set<ChainId> chainsToInhibit;
-    grid.initializeGridWithPiShapedTwoSegmentsChain(chainsInUse,
-                                                    Grid::chemicalPropertiesOf(CHROMATIN, ACTIVE),
-                                                    Grid::flagsOf(TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE),
-                                                    enforceChainIntegrity);
-    chainsToInhibit.insert(*chainsInUse.rbegin());
-
-    //    grid.initializeGridWithSingleChain(chainsInUse,
-//            0, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//            Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE), enforceChainIntegrity);
-//    grid.initializeGridWithSingleChain(chainsInUse,
-//            10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//            Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_INHIBITED), enforceChainIntegrity);
-//    auto chainsToActivate = grid.initializeGridWithSingleChain(chainsInUse,
-//            -10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//            Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_INHIBITED), enforceChainIntegrity);
-//    grid.initializeGridWithTwoParallelChains(5, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridWithTwoParallelChains(10, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridWithTwoParallelChains(15, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridWithTwoParallelChains(20, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridWithTwoParallelChains(25, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridWithTwoParallelChains(30, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridWithTwoParallelChains(35, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridWithTwoParallelChains(40, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridWithTwoParallelChains(45, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                                             Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridWithTwoOrthogonalChains(0, 0, Grid::chemicalPropertiesOf(CHROMATIN, NOT_ACTIVE),
-//                                               Grid::flagsOf(NOT_TRANSCRIBABLE, TRANSCRIPTION_POSSIBLE));
-//    grid.initializeGridWithTwoOrthogonalChains(-5, -5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
-//    grid.initializeGridWithTwoOrthogonalChains(+5, +5, Grid::chemicalPropertiesOf(RBP, ACTIVE));
     int numRbpCells = grid.getSpeciesCount(RBP);
     int numChromatinCells = numInnerCells - numRbpCells;
     double rbpRatio = static_cast<double>(numRbpCells) / numInnerCells;
     double chromatinRatio = static_cast<double>(numChromatinCells) / numInnerCells;
-    logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f", DUMP(numChromatinCells), DUMP(numRbpCells),
+    logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f, %s=%.3f", DUMP(numChromatinCells), DUMP(numRbpCells),
                   DUMP(chromatinRatio), DUMP(rbpRatio));
+    logger.logMsg(PRODUCTION, "CHAINS: %s=%d, %s=%d", DUMP(allChains.size()), DUMP(cutoffChains.size()));
     logger.logMsg(PRODUCTION, "Initializing microemulsion: %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f",
                   DUMP(dtChem), DUMP(kOn), DUMP(kOff), DUMP(kChromPlus), DUMP(kChromMinus), DUMP(kRnaPlus),
                   DUMP(kRnaMinus));
@@ -238,10 +232,26 @@ int main(int argc, const char **argv)
         if (t > cutoffTime && !cutoffTookPlace)
         {
             // Here perform the cutoff conditions //todo: make this configurable in some way
-//            microemulsion.setKChromPlus(0);
+            if (flavopiridol)
+            {
+                logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Flavopiridol condition");
+                microemulsion.setKChromPlus(0);
+            }
+            else if (actinomycinD)
+            {
+                logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Actinomycin D condition");
+                microemulsion.setKChromPlus(0);
+                microemulsion.setKChromMinus(0);
+                microemulsion.setKRnaPlus(0);
+            }
+            else
+            {
+                // Testing playground here...
+                logger.logEvent(PRODUCTION, t, "CUTOFF: Applying custom cutoff conditions");
 //            microemulsion.setKRnaMinus(0);
-//            microemulsion.enableTranscribabilityOnChains(chainsToActivate);
-            microemulsion.disableTranscribabilityOnChains(chainsToInhibit);
+                microemulsion.setTranscriptionInhibitionOnChains(allChains, TRANSCRIPTION_POSSIBLE);
+                microemulsion.setTranscriptionInhibitionOnChains(cutoffChains, TRANSCRIPTION_INHIBITED);
+            }
             cutoffTookPlace = true;
         }
         // Time-stepping loop

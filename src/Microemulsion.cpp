@@ -7,7 +7,8 @@
 //#include <omp.h>
 
 Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double deltaTChem, double kOn, double kOff,
-                             double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus, bool isBoundarySticky)
+                             double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
+                             bool isBoundarySticky)
         : grid(grid), logger(logger), omega(omega),
           uniformProbabilityDistribution(0.0, 1.0),
           dtChem(deltaTChem),
@@ -39,7 +40,7 @@ bool Microemulsion::performRandomSwap()
     }
     
     // Here we check if we are nearby the domain boundary and if we need to "stick" to it.
-    if (isBoundarySticky && isSwapBlockedByStickyBoundary(x, y))
+    if (isBoundarySticky && isSwapBlockedByStickyBoundary(x, y, 0, 0))
     {
         //todo: should we inhibit transcription on chromatin that sticks to the boundary?
         logger.logMsg(DEBUG, "Microemulsion::performRandomSwap - Swap not allowed by sticky boundary! "
@@ -539,8 +540,8 @@ void Microemulsion::setTranscriptionInhibitionOnChains(const std::set<ChainId> &
             std::set<ChainId> curCellChains = grid.chainsCellBelongsTo(curCell);
             std::set<ChainId> matches;
             set_intersection(curCellChains.begin(), curCellChains.end(),
-                                  targetChains.begin(), targetChains.end(),
-                                  inserter(matches, matches.begin()));
+                             targetChains.begin(), targetChains.end(),
+                             inserter(matches, matches.begin()));
             if (!matches.empty())
             {
                 Grid::setTranscriptionInhibition(curCell.flags, inhibition);
@@ -561,10 +562,11 @@ void Microemulsion::disableTranscribabilityOnChains(std::set<ChainId> targetChai
     setTranscriptionInhibitionOnChains(targetChains, TRANSCRIPTION_INHIBITED);
 }
 
-bool Microemulsion::isSwapBlockedByStickyBoundary(int x, int y)
+bool Microemulsion::isSwapBlockedByStickyBoundary(int x, int y, int nx, int ny)
 {
     // todo: check if this has to be applied to all chromatin or just to inactive one!
-    return grid.isPositionNextToBoundary(x, y) && grid.isInactiveChromatin(x, y);
+    return (grid.isPositionNextToBoundary(x, y) && grid.isInactiveChromatin(x, y))
+           || (grid.isPositionNextToBoundary(nx, ny) && grid.isInactiveChromatin(nx, ny));
 }
 
 

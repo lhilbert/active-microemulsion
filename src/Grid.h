@@ -10,15 +10,7 @@
 #include <set>
 #include "CellData.h"
 #include "Logger.h"
-
-typedef struct Displacement
-{
-    signed char x;
-    signed char y;
-    
-    Displacement() : x(0), y(0)
-    {};
-} Displacement;
+#include "ChainConfig.h"
 
 /*
  * The Grid class represents a discretized domain with a regular grid.
@@ -63,8 +55,6 @@ public:
     {
         return columns;
     }
-    
-    static void walkOnGrid(int &column, int &row, signed char colOffset, signed char rowOffset);
     
     const CellData **getData();
     
@@ -388,6 +378,8 @@ private:
     inline int pickRowOffset();
     
     inline int pickColumnOffset();
+    
+    static void walkOnGrid(int &column, int &row, signed char colOffset, signed char rowOffset);
     
     inline bool isPositionInChainPropertiesArrayValid(unsigned char position);
     
