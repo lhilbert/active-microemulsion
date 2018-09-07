@@ -78,8 +78,8 @@ int main(int argc, const char **argv)
     bool quietMode = varsMap.count("quiet") > 0;
     bool enforceChainIntegrity = varsMap.count("no-chain-integrity") == 0;
     bool stickyBoundary = varsMap.count("no-sticky-boundary") == 0;
-    bool flavopiridol = varsMap.count("flavopiridol") == 0;
-    bool actinomycinD = varsMap.count("actinomycin-D") == 0;
+    bool flavopiridol = varsMap.count("flavopiridol") != 0;
+    bool actinomycinD = varsMap.count("actinomycin-D") != 0;
 //    int endTime = argparser.retrieve<int>("end-time");
     //
     int numInnerCells = rows * columns;
