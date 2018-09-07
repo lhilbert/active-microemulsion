@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.5)
 project(active-microemulsion)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I./include")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O2 -Wall -pedantic -Werror")
 
+include_directories(./include)
 link_directories(./lib)
 
 add_executable(active-microemulsion
