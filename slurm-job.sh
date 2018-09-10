@@ -63,7 +63,7 @@ mkdir -p ${scratch}
 
 # copy all your NEEDED data to ComputeNode
 for item in ${REPO_ITEMS_TO_COPY[@]}; do
-    CMD=cp -r ${REPO_BASE_DIR}/${item} ${scratch}/.
+    CMD="cp -r ${REPO_BASE_DIR}/${item} ${scratch}/."
     echo ${CMD}
     ${CMD}
 done
