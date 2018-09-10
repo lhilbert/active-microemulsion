@@ -56,6 +56,8 @@ public:
         return columns;
     }
     
+    bool isCellWithinInternalDomain(int column, int row);
+    
     const CellData **getData();
     
     CellData &getElement(int column, int row);

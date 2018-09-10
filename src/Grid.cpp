@@ -373,12 +373,26 @@ std::set<ChainId> Grid::initializeGridWithStepInstructions(int &column, int &row
     
     unsigned int chainLength = static_cast<unsigned int>(steps.size() + 1);
     unsigned int position = 0;
+    logger.logMsg(COARSE_DEBUG, "Grid::initializeGridWithStepInstructions Setting cell at position (%3d,%3d)", column,
+                  row);
+    if (!isCellWithinInternalDomain(column, row))
+    {
+        logger.logMsg(ERROR, "FATAL: Trying to chain-configure cell not within internal domain! Please check your chain configuration file!");
+        throw std::out_of_range("Chain configuration must take place only within internal domain!");
+    }
     initializeCellProperties(column, row, chemicalProperties, flags, enforceChainIntegrity,
                              chainId, chainLength, position);
     for (Displacement step : steps)
     {
         ++position;
         walkOnGrid(column, row, step.x, step.y);
+        logger.logMsg(COARSE_DEBUG, "Grid::initializeGridWithStepInstructions Setting cell at position (%3d,%3d)",
+                      column, row);
+        if (!isCellWithinInternalDomain(column, row))
+        {
+            logger.logMsg(ERROR, "FATAL: Trying to chain-configure cell not within internal domain! Please check your chain configuration file!");
+            throw std::out_of_range("Chain configuration must take place only within internal domain!");
+        }
         initializeCellProperties(column, row, chemicalProperties, flags, enforceChainIntegrity,
                                  chainId, chainLength, position);
     }
@@ -691,4 +705,12 @@ void Grid::walkOnGrid(int &column, int &row, signed char colOffset, signed char 
 {
     column += colOffset;
     row += rowOffset;
+}
+
+bool Grid::isCellWithinInternalDomain(int column, int row)
+{
+    return column >= getFirstColumn()
+           && column <= getLastColumn()
+           && row >= getFirstRow()
+           && row <= getLastRow();
 }
