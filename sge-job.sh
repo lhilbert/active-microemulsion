@@ -41,7 +41,7 @@ REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs"
 #
 # Specific queue where to schedule the job
 # #$ -q <queue_name>
-#$ -q anubis
+# #$ -q anubis
 #
 
 ################
