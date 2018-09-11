@@ -1,4 +1,11 @@
-#!/usr/bin/env bash
+#!/bin/bash -i
+#$ -S /bin/bash
+#
+# MPI-PKS script for job submission script with ’qsub’.
+# Syntax is Bash with special qsub-instructions that begin with ’#$’.
+# For more detailed documentation, see
+#     https://start.pks.mpg.de/dokuwiki/doku.php/getting-started:queueing_system
+#
 
 # Active microemulsion command line parameters
 CONFIG_FLAGS="-T 18e3 -c 3 -w 0.25 -s 333 --no-sticky-boundary -P ChainConfigs/testConfig.chains"
@@ -8,48 +15,34 @@ flagsToNameFilter()
 {
     sed s/" -\| --"/"_"/g | sed s/"[.]\|^-"/""/g | sed s,"_[a-zA-Z] [^ ]\+/[^ ]\+","",g | sed s/" "/""/g
 }
-OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_slurm_${SLURM_JOB_ID}"
+OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_sge_$$"
 
 # Settings for config data and shared libraries
 REPO_BASE_DIR=${HOME}/Repo/active-microemulsion
 REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs" "sequenceFigureBuilder.sh" ) # Will be copied with "cp -r"
 
-################
+
+
+
+# --- Mandatory qsub arguments
+# Hardware requirements.
+#$ -l h_rss=256M,h_fsize=100M,h_cpu=01:10:00,hw=x86_64
+
+# --- Optional qsub arguments
+# Change working directory - your job will be run from the directory
+# that you call qsub in.  So stdout and stderr will end up there.
+#$ -cwd
 #
-# Setting slurm options
+# Split stdout and stderr to 2 files
+#$ -j n
 #
-################
-
-# lines starting with "#SBATCH" define your jobs parameters
-
-# requesting the type of node on which to run job
-##SBATCH --partition <patition name>
-
-# telling slurm how many instances of this job to spawn (typically 1)
-#SBATCH --ntasks 1
-
-# setting number of CPUs per task (1 for serial jobs)
-#SBATCH --cpus-per-task 1
-
-# setting memory requirements (in MB)
-#SBATCH --mem-per-cpu 512
-
-# propagating max time for job to run
-##SBATCH --time <days-hours:minute:seconds>
-##SBATCH --time <hours:minute:seconds>
-##SBATCH --time <minutes>
-#SBATCH --time 60
-
-# Setting the name for the job
-#SBATCH --job-name active-microemulsion
-
-# setting notifications for job
-# accepted values are ALL, BEGIN, END, FAIL, REQUEUE
-#SBATCH --mail-type ALL
-
-# telling slurm where to write output and error
-##SBATCH --output <path>-%j.out
-##SBATCH --error <path>-%j.out
+# Job name - purely cosmetic (changes name in ‘qstat‘).
+#$ -N active-microemulsion
+#
+# Specific queue where to schedule the job
+# #$ -q <queue_name>
+#$ -q anubis
+#
 
 ################
 #
@@ -58,7 +51,7 @@ REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs"
 ################
 
 # create local folder on ComputeNode
-scratch=/scratch/${USER}/slurm_${SLURM_JOB_ID}
+scratch=/scratch/${USER}/sge_$$
 mkdir -p ${scratch}
 
 # copy all your NEEDED data to ComputeNode
