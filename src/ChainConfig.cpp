@@ -109,7 +109,7 @@ ChainConfig &ChainConfig::parseSteps(ChainConfig &tmp, std::string &inputString)
         {
             xDisplacementStr.append("1");
         }
-        if (yDisplacementStr == "+" || xDisplacementStr == "-" )
+        if (yDisplacementStr == "+" || yDisplacementStr == "-" )
         {
             yDisplacementStr.append("1");
         }
