@@ -13,7 +13,11 @@ CONFIG_FLAGS="-T 18e3 -c 3 -w 0.25 -s 333 --no-sticky-boundary -P ChainConfigs/t
 # OutFolder naming filter from flags
 flagsToNameFilter()
 {
-    sed s/" -\| --"/"_"/g | sed s/"[.]\|^-"/""/g | sed s,"_[a-zA-Z] [^ ]\+/[^ ]\+","",g | sed s/" "/""/g
+    sed s/" -\| --"/"_"/g \
+    | sed s,"_P \([^ ]\+/\|\)\([^ ]\+\)\.[^ ]\+","_P\2",g \
+    | sed s/"[.]\|^-"/""/g \
+    | sed s,"_[a-zA-Z] [^ ]\+/[^ ]\+","",g \
+    | sed s/" "/""/g
 }
 OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_sge_$$"
 
