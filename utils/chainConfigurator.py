@@ -158,8 +158,8 @@ class Configurator:
                 [int(randomChoiceWithProbability(self.inhibitionProb)) for x in range(self.numChromosomes)]
         else:
             numInhibitedChains = self.numChromosomes - self.numActiveChains
-            flags = [1] * numInhibitedChains + [0] * self.numActiveChains
-            self.chromosomeInhibitionFlags = random.shuffle(flags)
+            self.chromosomeInhibitionFlags = [1] * numInhibitedChains + [0] * self.numActiveChains
+            random.shuffle(self.chromosomeInhibitionFlags)
 
     def __generateChromosomes(self):
         n = round(sqrt(self.numChromosomes))
@@ -177,9 +177,9 @@ class Configurator:
                         (random.choice(['b', 't']), random.choice(['l', 'r'])),
                         0,
                         0,
-                        int(randomChoiceWithProbability(self.inhibitionProb)),
+                        inhibitFlag,
                         1)
-             for coord in self.chromosomeStartPositions]
+             for coord, inhibitFlag in zip(self.chromosomeStartPositions, self.chromosomeInhibitionFlags)]
 
     def __repr__(self):
         return "Configurator(%r,%r,%r,%r)" % (self.domainDimensions,
