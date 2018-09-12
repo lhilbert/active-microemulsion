@@ -196,7 +196,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("outputFile", help="The file the generated config should be written to")
-    # parser.add_argument("-t", "--test", help="Test flag", action="store_true")
     parser.add_argument("-W", "--width", help="The width of the domain (number of columns)", type=int, default=50)
     parser.add_argument("-H", "--height", help="The height of the domain (number of rows)", type=int, default=50)
     parser.add_argument("-C", "--chromatin-ratio", help="The ratio of the domain occupied by chromatin",
