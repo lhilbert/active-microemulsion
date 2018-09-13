@@ -5,15 +5,152 @@
 #
 
 import argparse
+import glob
+
 import cv2
 import numpy as np
 # from scipy import signal
 import os
 from matplotlib import pyplot as plt
+from natsort import natsorted
+import csv
 
 
 def computeCov(data):
-    return np.std(data) / np.mean(data)
+    mean = np.mean(data)
+    return np.std(data) / mean, mean
+
+
+def getEntryNearestToValue(givenList, value):
+    return min(givenList, key=lambda x: abs(x - value))
+
+
+class FileSequence:
+    @staticmethod
+    def natsort(sequence):
+        return natsorted(sequence)
+
+    @staticmethod
+    def expand(pattern):
+        return FileSequence.natsort(glob.glob(pattern))
+
+    @staticmethod
+    def expandSequence(inputFileSequence):
+        fileSequence = []
+        for f in inputFileSequence:
+            if '*' in f:  # In this case f is a pattern to expand
+                fileSequence.extend(FileSequence.expand(f))
+            else:
+                fileSequence.append(f)
+        return FileSequence.natsort(fileSequence)
+
+
+class Analysis:
+    def __init__(self, fileSequence, blurRadius=3):
+        self.fileSequence = fileSequence
+        self.blurRadius = blurRadius
+        self.deltaT = 1
+        self.skip = 0
+        self.resultsKeys = ['SnapshotNumber', 'CoV', 'MeanIntensity']
+        self.results = []  # List of [snapshotNumber, CoV, meanIntensity] elements
+        self.resultMatrix = None  # This will contain the numpy.ndarray of the results for easy slicing
+        self.resultDict = {"id": [], "cov": [], "meanIntensity": []}
+        self.__analyzeSequence(self.fileSequence)
+
+    def __analyzeSnapshot(self, snapshotNum, snapshotFile):
+        img = cv2.imread(snapshotFile)
+        if type(img) == type(None):
+            print("WARNING: Image %s cannot be read. Ignoring it." % (snapshotFile))
+            return
+        blurredImg = cv2.GaussianBlur(img, (self.blurRadius, self.blurRadius), 0)
+        cov, mean = computeCov(blurredImg)
+        self.results.append([snapshotNum, cov, mean])
+        print("> %s : CoV = %f, meanIntensity = %f" % (os.path.basename(snapshotFile), cov, mean))
+
+    def __analyzeSequence(self, fileSequence):
+        for id, item in enumerate(fileSequence):
+            self.__analyzeSnapshot(id, item)
+        self.resultMatrix = np.array(self.results)
+        self.resultDict["id"] = list(self.resultMatrix[:, 0])
+        self.resultDict["cov"] = list(self.resultMatrix[:, 1])
+        self.resultDict["meanIntensity"] = list(self.resultMatrix[:, 2])
+
+    @staticmethod
+    def computeMovingAverage(sequence, windowSize):
+        return np.convolve(sequence, np.ones((windowSize,)) / windowSize, mode='valid')
+
+    def setSkip(self, skip=0):
+        """
+        Set the number of initial entries to skip when getting the results.
+        :param skip: Positive integer
+        :return: None
+        """
+        self.skip = skip
+
+    def setDeltaT(self, deltaT=1):
+        """
+        Set the time mapping corresponding to a single timestep.
+        :param deltaT: Positive integer
+        :return: None
+        """
+        self.deltaT = deltaT
+
+    def getX(self):
+        return [self.deltaT * x for x in self.resultDict["id"][self.skip:]]
+
+    def getCov(self):
+        return self.resultDict["cov"][self.skip:]
+
+    def getMeanIntensity(self):
+        return self.resultDict["meanIntensity"][self.skip:]
+
+
+class Plotter:
+    def __init__(self, X, plotFileName="plot.svg", interactive=True):
+        self.X = X
+        self.plotFileName = plotFileName
+        self.interactive = interactive
+        self.Ys = []
+        self.offsets = {}
+        self.plotHeight = 0
+        self.fig, self.ax = plt.subplots()
+        self.ax.spines['right'].set_visible(False)
+        self.ax.spines['top'].set_visible(False)
+        self.ax.xaxis.set_ticks_position('bottom')
+        self.ax.yaxis.set_ticks_position('left')
+
+    def addYSeries(self, Y, xOffset=0):
+        self.Ys.append(Y)
+        self.plotHeight = np.max([np.max(y) for y in self.Ys]) - np.min([np.min(y) for y in self.Ys])
+        if xOffset > 0:
+            self.offsets[len(self.Ys) - 1] = xOffset
+
+    def plot(self):
+        for id, Y in enumerate(self.Ys):
+            if id in self.offsets.keys():
+                offset = self.offsets[id]
+                self.ax.plot(self.X[offset:-offset], Y)
+            else:
+                self.ax.plot(self.X, Y)
+
+        if self.interactive:  # Here switch interactive mode off for matplotlib
+            plt.show()
+        else:
+            plt.ioff()
+
+        self.fig.savefig(self.plotFileName)
+
+
+class CsvWriter:
+    def __init__(self, keys, dataMatrix):
+        self.keys = keys
+        self.data = dataMatrix
+
+    def write(self, fileName):
+        with open(fileName, 'w') as csvfile:
+            datawriter = csv.writer(csvfile)
+            datawriter.writerow(self.keys)
+            datawriter.writerows(self.data)
 
 
 if __name__ == "__main__":
@@ -21,54 +158,57 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("inputFiles", help="The image file to perform measurements on", nargs='+')
     parser.add_argument("-b", "--blur-radius", help="Radius of gaussian blur", dest="blurRadius", type=int, default=3)
-    parser.add_argument("-m", "--moving-average-window", help="Length of the moving average window",
+    parser.add_argument("-m", "--moving-average-window",
+                        help="Length of the moving average window. NOTE: It must be an ODD number",
                         dest="movingAvgWindow", type=int, default=7)
+    parser.add_argument("-t", "--time-mapping", help="Time interval between snapshots", dest="deltaT", type=float,
+                        default=1)
+    parser.add_argument("-c", "--cutoff-time", help="Time point at which cutoff took place", dest="cutoff", type=float,
+                        default=-1)
+    parser.add_argument("-p", "--plot", help="Name of the desired output file for the generated plot",
+                        dest="plotFileName", default="contrastAnalysis_plot.svg")
+    parser.add_argument("-d", "--csv", help="Name of the desired output csv for the data",
+                        dest="csvFileName", default="contrastAnalysis_results.csv")
+    parser.add_argument("-s", "--script-mode", help="Run non-interactive. For embedding into scripts.",
+                        dest="scriptMode", action='store_true')
 
     args = parser.parse_args()
+    # Expanding and sorting the file list
+    fileSequence = FileSequence.expandSequence(args.inputFiles)
     #
-    firstFile = args.inputFiles[0]
-    if firstFile[-1] == '_':
-        args.inputFiles = \
-            [firstFile + str(i) + ".pgm" for i in range(101)]
-    covList = []
-    for f in args.inputFiles:
-        img = cv2.imread(f)
-        blur = cv2.GaussianBlur(img, (args.blurRadius, args.blurRadius), 0)
-        cov = computeCov(blur)
-        covList.append(cov)
-        print("> %s : CoV = %f" % (os.path.basename(f), cov))
+    analysis = Analysis(fileSequence, blurRadius=args.blurRadius)
+    analysis.setSkip(1)
+    analysis.setDeltaT(args.deltaT)
 
-    X = range(len(args.inputFiles))
-    # Remove the first k entries as meaningless
-    k = 1
-    X = X[k:]
-    covList = covList[k:]
-    # # Polynomial fit
-    # P = np.polyfit(X, covList, 5)
-    # p = np.poly1d(P)
-    # Pfit = p(X)
+    # Write analysis data to CSV
+    CsvWriter(analysis.resultsKeys, analysis.results).write(args.csvFileName)
+
     # Moving average
-    n = args.movingAvgWindow  # Must be an odd number
-    MA = np.convolve(covList, np.ones((n,)) / n, mode='valid')
+    maWindow = args.movingAvgWindow  # Must be an odd number
+    MA = Analysis.computeMovingAverage(analysis.getCov(), maWindow)
     # Find argmax of the moving average
     argmaxMA = np.argmax(MA)
+    offsetMA = int((maWindow - 1) / 2)
 
     # Plotting
-    plotHeight = np.max(covList) - np.min(covList)
-    fig, ax = plt.subplots()
-    ax.plot(X, covList)
-    # plt.plot(X, Pfit)
-    offsetMA = int((n - 1) / 2)
-    ax.plot(X[offsetMA:-offsetMA], MA)
+    plotter = Plotter(analysis.getX(), plotFileName=args.plotFileName, interactive=(not args.scriptMode))
+    plotter.addYSeries(analysis.getCov())
+    plotter.addYSeries(MA, offsetMA)
+    # Annotation
     maxMA = MA[argmaxMA]
-    maxCovX = k + offsetMA + argmaxMA
-    ax.annotate('Maximum CoV @ x=%d' % (maxCovX),
-                xy=(maxCovX, maxMA + 0.03 * plotHeight),
-                xytext=(maxCovX - 10, maxMA + 0.2 * plotHeight),
-                arrowprops=dict(facecolor='red', shrink=1))
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.xaxis.set_ticks_position('bottom')
-    ax.yaxis.set_ticks_position('left')
-    plt.show()
+    maxCovX = (analysis.skip + offsetMA + argmaxMA) * analysis.deltaT
+    plotter.ax.annotate('Maximum CoV @ x=%d' % (maxCovX),
+                        xy=(maxCovX, maxMA + 0.03 * plotter.plotHeight),
+                        xytext=(maxCovX - 10, maxMA + 0.2 * plotter.plotHeight),
+                        arrowprops=dict(facecolor='red', shrink=1))
+    cutoffTime = args.cutoff
+    if cutoffTime > 0:
+        nearestTimeToCutoff = getEntryNearestToValue(analysis.getX(), cutoffTime)
+        # nearestValueToCutoff = analysis.getCov()[analysis.getX().index(nearestTimeToCutoff)]
+        nearestValueToCutoff = MA[analysis.getX().index(nearestTimeToCutoff) - offsetMA]
+        plotter.ax.annotate('Cutoff @ x=%d' % (cutoffTime),
+                            xy=(cutoffTime, nearestValueToCutoff - 0.03 * plotter.plotHeight),
+                            xytext=(cutoffTime - 10, nearestValueToCutoff - 0.2 * plotter.plotHeight),
+                            arrowprops=dict(facecolor='green', shrink=1))
+    plotter.plot()
 # eof
