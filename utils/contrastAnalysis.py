@@ -163,7 +163,17 @@ if __name__ == "__main__":
                         dest="movingAvgWindow", type=int, default=7)
     parser.add_argument("-t", "--time-mapping", help="Time interval between snapshots", dest="deltaT", type=float,
                         default=1)
-    parser.add_argument("-c", "--cutoff-time", help="Time point at which cutoff took place", dest="cutoff", type=float,
+    parser.add_argument("-c", "--cutoff-time", help="Time point at which a generic cutoff took place", dest="cutoff",
+                        type=float,
+                        default=-1)
+    parser.add_argument("--flavopiridol", help="Time point at which Flavopiridol was applied", dest="flavopiridol",
+                        type=float,
+                        default=-1)
+    parser.add_argument("--actinomycin-D", help="Time point at which Actinomycin D was applied", dest="actinomycinD",
+                        type=float,
+                        default=-1)
+    parser.add_argument("--activate", help="Time point at which transcription is activated", dest="activate",
+                        type=float,
                         default=-1)
     parser.add_argument("-p", "--plot", help="Name of the desired output file for the generated plot",
                         dest="plotFileName", default="contrastAnalysis_plot.svg")
@@ -199,8 +209,31 @@ if __name__ == "__main__":
     maxCovX = (analysis.skip + offsetMA + argmaxMA) * analysis.deltaT
     plotter.ax.annotate('Maximum CoV @ x=%d' % (maxCovX),
                         xy=(maxCovX, maxMA + 0.03 * plotter.plotHeight),
-                        xytext=(maxCovX - 10, maxMA + 0.2 * plotter.plotHeight),
+                        xytext=(maxCovX - 10 * analysis.deltaT, maxMA + 0.2 * plotter.plotHeight),
                         arrowprops=dict(facecolor='red', shrink=1))
+    activateTime = args.activate
+    if activateTime > 0:
+        nearestTimeToActivation = getEntryNearestToValue(analysis.getX(), activateTime)
+        # nearestValueToCutoff = analysis.getCov()[analysis.getX().index(nearestTimeToCutoff)]
+        nearestValueToActivation = MA[analysis.getX().index(nearestTimeToActivation) - offsetMA]
+        plotter.ax.annotate('Transcription ON @ x=%d' % (activateTime),
+                            xy=(activateTime, nearestValueToActivation + 0.03 * plotter.plotHeight),
+                            xytext=(
+                            activateTime - 10 * analysis.deltaT, nearestValueToActivation + 0.2 * plotter.plotHeight),
+                            arrowprops=dict(facecolor='black', shrink=1))
+
+    for event in ["flavopiridol", "actinomycinD"]:
+        eventTime = getattr(args, event)
+        if eventTime > 0:
+            nearestTimeToEvent = getEntryNearestToValue(analysis.getX(), eventTime)
+            # nearestValueToCutoff = analysis.getCov()[analysis.getX().index(nearestTimeToCutoff)]
+            nearestValueToEvent = MA[analysis.getX().index(nearestTimeToEvent) - offsetMA]
+            plotter.ax.annotate('%s @ x=%d' % (event.capitalize(), eventTime),
+                                xy=(eventTime, nearestValueToEvent - 0.03 * plotter.plotHeight),
+                                xytext=(
+                                eventTime - 10 * analysis.deltaT, nearestValueToEvent - 0.2 * plotter.plotHeight),
+                                arrowprops=dict(facecolor='green', shrink=1))
+
     cutoffTime = args.cutoff
     if cutoffTime > 0:
         nearestTimeToCutoff = getEntryNearestToValue(analysis.getX(), cutoffTime)
