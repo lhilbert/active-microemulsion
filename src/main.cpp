@@ -4,6 +4,7 @@
 #include "Microemulsion.h"
 #include "PgmWriter.h"
 #include "ChainConfig.h"
+#include "CutoffEventSchedule.h"
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
@@ -22,6 +23,10 @@ int main(int argc, const char **argv)
     double kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kMax;
     std::set<double> kSet;
     
+    std::vector<double> flavopiridolEvents;
+    std::vector<double> actinomycinDEvents;
+    std::vector<double> activationEvents;
+    
     // Command-line argument parser. We use Boost Program Options (https://www.boost.org/doc/libs/1_68_0/doc/html/program_options.html).
     opt::options_description argsDescription("Supported options");
     // Here below some arguments, to be completed.
@@ -32,8 +37,15 @@ int main(int argc, const char **argv)
             ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
             ("no-chain-integrity", "Do not enforce chain integrity")
             ("no-sticky-boundary", "Do not make boundary sticky to chromatin")
-            ("flavopiridol", "Apply Flavopiridol at cutoff time")
-            ("actinomycin-D", "Apply Actinomycin D at cutoff time")
+            ("flavopiridol",
+                    opt::value<std::vector<double>>(&flavopiridolEvents)->multitoken()->zero_tokens()->composing(),
+                    "Apply Flavopiridol at cutoff time(s). Cutoff time(s) can be specified as parameter")
+            ("actinomycin-D",
+                    opt::value<std::vector<double>>(&actinomycinDEvents)->multitoken()->zero_tokens()->composing(),
+                    "Apply Actinomycin D at cutoff time. Cutoff time(s) can be specified as parameter")
+            ("activate",
+                    opt::value<std::vector<double>>(&activationEvents)->multitoken()->zero_tokens()->composing(),
+                    "Activate transcription at cutoff time. Cutoff time(s) can be specified as parameter")
             ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
              "Specify the folder to use for output (log and data)")
             ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
@@ -73,14 +85,19 @@ int main(int argc, const char **argv)
         return 1;
     }
     
+//    // debug
+//    std::cout << flavopiridolEvents.size() << std::endl;
+//    return 1;
+//    //
+    
     bool debugMode = varsMap.count("debug") > 0;
     bool coarseDebugMode = varsMap.count("coarse-debug") > 0;
     bool quietMode = varsMap.count("quiet") > 0;
     bool enforceChainIntegrity = varsMap.count("no-chain-integrity") == 0;
     bool stickyBoundary = varsMap.count("no-sticky-boundary") == 0;
-    bool flavopiridol = varsMap.count("flavopiridol") != 0;
-    bool actinomycinD = varsMap.count("actinomycin-D") != 0;
-//    int endTime = argparser.retrieve<int>("end-time");
+    bool flavopiridolSwitchPassed = varsMap.count("flavopiridol") != 0;
+    bool actinomycinDSwitchPassed = varsMap.count("actinomycin-D") != 0;
+    bool activateSwitchPassed = varsMap.count("activate") != 0;
     //
     int numInnerCells = rows * columns;
     double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
@@ -99,11 +116,27 @@ int main(int argc, const char **argv)
         cutoffTime = endTime / cutoffTimeFraction;
     }
     
+    // Populate the events' schedule
+    CutoffEventSchedule eventSchedule(cutoffTime);
+    if (flavopiridolSwitchPassed)
+    {
+        eventSchedule.addEvents(flavopiridolEvents, FLAVOPIRIDOL);
+    }
+    if (actinomycinDSwitchPassed)
+    {
+        eventSchedule.addEvents(actinomycinDEvents, ACTINOMYCIN_D);
+    }
+    if (activateSwitchPassed)
+    {
+        eventSchedule.addEvents(activationEvents, ACTIVATE);
+    }
+    
     // If output folder doesn't exist, create it
     if (!boost::filesystem::exists(outputDir))
     {
         boost::filesystem::create_directory(outputDir);
     }
+    
     // Setup and start Logger
     Logger logger;
     logger.setOutputFolder(outputDir.data());
@@ -129,8 +162,10 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(quietMode));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(enforceChainIntegrity));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(stickyBoundary));
-    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(flavopiridol));
-    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(actinomycinD));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(flavopiridolSwitchPassed));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(actinomycinDSwitchPassed));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(activateSwitchPassed));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(eventSchedule.size()));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(outputDir.data()));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(inputImage.data()));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(inputChainsFile.data()));
@@ -226,33 +261,43 @@ int main(int argc, const char **argv)
     unsigned long swapsPerformed = 0;
     unsigned long chemChangesPerformed = 0;
     logger.logEvent(INFO, t, "Entering main time-stepping loop");
-    bool cutoffTookPlace = false;
+//    bool cutoffTookPlace = false;
     while (t < endTime)
     {
-        if (t > cutoffTime && !cutoffTookPlace)
+        if (eventSchedule.check(t))
         {
-            // Here perform the cutoff conditions //todo: make this configurable in some way
-            if (flavopiridol)
+            auto eventsToApply = eventSchedule.getEventsToApply(t);
+            for (auto event : eventsToApply)
             {
-                logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Flavopiridol condition");
-                microemulsion.setKChromPlus(0);
-            }
-            else if (actinomycinD)
-            {
-                logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Actinomycin D condition");
-                microemulsion.setKChromPlus(0);
-                microemulsion.setKChromMinus(0);
-                microemulsion.setKRnaPlus(0);
-            }
-            else
-            {
-                // Testing playground here...
-                logger.logEvent(PRODUCTION, t, "CUTOFF: Applying custom cutoff conditions");
+                if (event == FLAVOPIRIDOL)
+                {
+                    logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Flavopiridol condition");
+                    microemulsion.setKChromPlus(0);
+                }
+                else if (event == ACTINOMYCIN_D)
+                {
+                    logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Actinomycin D condition");
+                    microemulsion.setKChromPlus(0);
+                    microemulsion.setKChromMinus(0);
+                    microemulsion.setKRnaPlus(0);
+                }
+                else if (event == ACTIVATE)
+                {
+                    logger.logEvent(PRODUCTION, t, "CUTOFF: Activating transcription");
+                    microemulsion.setKChromPlus(kChromPlus);
+                    microemulsion.setKChromMinus(kChromMinus);
+                    microemulsion.setKRnaPlus(kRnaPlus);
+                    microemulsion.setKRnaMinus(kRnaMinus);
+                }
+                else
+                {
+                    // Testing playground here...
+                    logger.logEvent(PRODUCTION, t, "CUTOFF: Applying custom cutoff conditions");
 //            microemulsion.setKRnaMinus(0);
-                microemulsion.setTranscriptionInhibitionOnChains(allChains, TRANSCRIPTION_POSSIBLE);
-                microemulsion.setTranscriptionInhibitionOnChains(cutoffChains, TRANSCRIPTION_INHIBITED);
+                    microemulsion.setTranscriptionInhibitionOnChains(allChains, TRANSCRIPTION_POSSIBLE);
+                    microemulsion.setTranscriptionInhibitionOnChains(cutoffChains, TRANSCRIPTION_INHIBITED);
+                }
             }
-            cutoffTookPlace = true;
         }
         // Time-stepping loop
         while (t < nextOutputTime)

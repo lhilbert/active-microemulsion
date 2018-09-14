@@ -11,5 +11,5 @@ add_executable(active-microemulsion
         src/main.cpp
         src/Timing.cpp src/Timing.h
         src/Logger.cpp src/Logger.h
-        src/Grid.cpp src/Grid.h src/PgmWriter.cpp src/PgmWriter.h src/Microemulsion.cpp src/Microemulsion.h src/CellData.h src/ChainConfig.cpp src/ChainConfig.h)
+        src/Grid.cpp src/Grid.h src/PgmWriter.cpp src/PgmWriter.h src/Microemulsion.cpp src/Microemulsion.h src/CellData.h src/ChainConfig.cpp src/ChainConfig.h src/CutoffEventSchedule.cpp src/CutoffEventSchedule.h)
 target_link_libraries(active-microemulsion boost_program_options boost_system boost_filesystem m)
