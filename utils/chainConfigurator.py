@@ -178,7 +178,7 @@ class Configurator:
                         0,
                         0,
                         inhibitFlag,
-                        1)
+                        int(not inhibitFlag))
              for coord, inhibitFlag in zip(self.chromosomeStartPositions, self.chromosomeInhibitionFlags)]
 
     def __repr__(self):
