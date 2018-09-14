@@ -7,8 +7,10 @@
 #     https://start.pks.mpg.de/dokuwiki/doku.php/getting-started:queueing_system
 #
 
-# Active microemulsion command line parameters
-CONFIG_FLAGS="-T 18e3 -c 3 -w 0.25 -s 333 --no-sticky-boundary -P ChainConfigs/testConfig.chains"
+# Active microemulsion command line parameters are passed from outside
+# Schedule this with:
+# qsub sge-job.sh <active-microemulsion_arguments>
+CONFIG_FLAGS="$@"
 
 # OutFolder naming filter from flags
 flagsToNameFilter()
@@ -23,10 +25,7 @@ OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_sge_$$"
 
 # Settings for config data and shared libraries
 REPO_BASE_DIR=${HOME}/Repo/active-microemulsion
-REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs" "sequenceFigureBuilder.sh" ) # Will be copied with "cp -r"
-
-
-
+REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs" "sequenceFigureBuilder.sh" "utils" ) # Will be copied with "cp -r"
 
 # --- Mandatory qsub arguments
 # Hardware requirements.
@@ -74,11 +73,7 @@ pushd ${scratch}
 
 # if needed add export variables here
 
-################
-#
-# run the program
-#
-################
+# Run the simulation
 echo "Running on $(hostname)"
 echo "We are in $(pwd)"
 ${scratch}/active-microemulsion ${CONFIG_FLAGS} -o ${OUT_DIR}
