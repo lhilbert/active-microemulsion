@@ -4,11 +4,19 @@
 #include "Microemulsion.h"
 #include "PgmWriter.h"
 #include "ChainConfig.h"
-#include "CutoffEventSchedule.h"
+#include "EventSchedule.h"
+#include "EventSchedule.cpp" // Since template implementation is here
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
 namespace opt = boost::program_options;
+
+void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
+                       const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kChromPlus,
+                       double kChromMinus, double kRnaPlus, double kRnaMinus, double t);
+
+void takeSnapshots(Logger &logger, PgmWriter &dnaWriter, PgmWriter &rnaWriter, PgmWriter &transcriptionWriter, double t,
+                   unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed);
 
 int main(int argc, const char **argv)
 {
@@ -16,9 +24,11 @@ int main(int argc, const char **argv)
     double endTime;
     double cutoffTime = -1;
     double cutoffTimeFraction = 1;
-    int rows = 50, columns = 50; //todo: then read these from config
-    int swapsPerPixelPerUnitTime = 500; //todo read this from config
+    int rows = 50, columns = 50;
+    int swapsPerPixelPerUnitTime = 500;
     int numVisualizationOutputs = 100; //todo read this from config
+    double snapshotInterval = -1;
+//    double extraSnapshotTimeOffset = -1;
     double omega = 0.5; //todo read this from config
     double kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kMax;
     std::set<double> kSet;
@@ -38,14 +48,14 @@ int main(int argc, const char **argv)
             ("no-chain-integrity", "Do not enforce chain integrity")
             ("no-sticky-boundary", "Do not make boundary sticky to chromatin")
             ("flavopiridol",
-                    opt::value<std::vector<double>>(&flavopiridolEvents)->multitoken()->zero_tokens()->composing(),
-                    "Apply Flavopiridol at cutoff time(s). Cutoff time(s) can be specified as parameter")
+             opt::value<std::vector<double>>(&flavopiridolEvents)->multitoken()->zero_tokens()->composing(),
+             "Apply Flavopiridol at cutoff time(s). Cutoff time(s) can be specified as parameter")
             ("actinomycin-D",
-                    opt::value<std::vector<double>>(&actinomycinDEvents)->multitoken()->zero_tokens()->composing(),
-                    "Apply Actinomycin D at cutoff time. Cutoff time(s) can be specified as parameter")
+             opt::value<std::vector<double>>(&actinomycinDEvents)->multitoken()->zero_tokens()->composing(),
+             "Apply Actinomycin D at cutoff time. Cutoff time(s) can be specified as parameter")
             ("activate",
-                    opt::value<std::vector<double>>(&activationEvents)->multitoken()->zero_tokens()->composing(),
-                    "Activate transcription at cutoff time. Cutoff time(s) can be specified as parameter")
+             opt::value<std::vector<double>>(&activationEvents)->multitoken()->zero_tokens()->composing(),
+             "Activate transcription at cutoff time. Cutoff time(s) can be specified as parameter")
             ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
              "Specify the folder to use for output (log and data)")
             ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
@@ -57,6 +67,12 @@ int main(int argc, const char **argv)
              "Time at which the chemical reaction cutoff takes place")
             ("cutoff-time-fraction,c", opt::value<double>(&cutoffTimeFraction)->default_value(1),
              "Fraction of endTime at which the chemical reaction cutoff takes place")
+            ("snapshot-interval,t", opt::value<double>(&snapshotInterval)->default_value(-1),
+             "Time interval (in seconds) between visualization snapshots. A negative time lets the '-S' flag take over")
+            ("number-snapshots,S", opt::value<int>(&numVisualizationOutputs)->default_value(100),
+             "Number of visualization snapshots to take. Only applied if '-t' is negative or not set")
+//            ("extra-snapshot,e", opt::value<double>(&extraSnapshotTimeOffset)->default_value(1800),
+//                    "Time interval (in seconds) between cutoff events and their respective extra snapshot. A negative time disables the extra snapshot. The default value is 1800s = 30m")
             ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
             ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
             ("omega,w", opt::value<double>(&omega)->default_value(0.5),
@@ -84,7 +100,7 @@ int main(int argc, const char **argv)
         std::cout << argsDescription << std::endl;
         return 1;
     }
-    
+
 //    // debug
 //    std::cout << flavopiridolEvents.size() << std::endl;
 //    return 1;
@@ -109,26 +125,33 @@ int main(int argc, const char **argv)
     kSet.insert(kRnaMinus);
     kMax = *kSet.rbegin(); // Get the maximum on the set
     double dtChem = 0.1 / kMax;
-    double dtOut =
-            endTime / numVisualizationOutputs; // The dt used for visualization output. //todo read this from config
+    if (snapshotInterval <= 0) // Auto-compute it only if it was not set
+    {
+        snapshotInterval =
+                endTime / numVisualizationOutputs; // The dt used for visualization output.
+    }
+    else // If instead the interval is given, recompute the num snapshot for logging purpose
+    {
+        numVisualizationOutputs = static_cast<int>(floor(endTime / snapshotInterval));
+    }
     if (cutoffTime < 0)
     {
         cutoffTime = endTime / cutoffTimeFraction;
     }
     
     // Populate the events' schedule
-    CutoffEventSchedule eventSchedule(cutoffTime);
+    EventSchedule<CutoffEvent> cutoffSchedule(cutoffTime);
     if (flavopiridolSwitchPassed)
     {
-        eventSchedule.addEvents(flavopiridolEvents, FLAVOPIRIDOL);
+        cutoffSchedule.addEvents(flavopiridolEvents, FLAVOPIRIDOL);
     }
     if (actinomycinDSwitchPassed)
     {
-        eventSchedule.addEvents(actinomycinDEvents, ACTINOMYCIN_D);
+        cutoffSchedule.addEvents(actinomycinDEvents, ACTINOMYCIN_D);
     }
     if (activateSwitchPassed)
     {
-        eventSchedule.addEvents(activationEvents, ACTIVATE);
+        cutoffSchedule.addEvents(activationEvents, ACTIVATE);
     }
     
     // If output folder doesn't exist, create it
@@ -165,7 +188,7 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(flavopiridolSwitchPassed));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(actinomycinDSwitchPassed));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(activateSwitchPassed));
-    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(eventSchedule.size()));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(cutoffSchedule.size()));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(outputDir.data()));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(inputImage.data()));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%s", DUMP(inputChainsFile.data()));
@@ -174,7 +197,6 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(rows));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(columns));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(swapsPerPixelPerUnitTime));
-    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numVisualizationOutputs));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(omega));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kOn));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kOff));
@@ -183,10 +205,12 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kRnaPlus));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kRnaMinus));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kMax));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numVisualizationOutputs));
+//    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(extraSnapshotTimeOffset));
     
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dt));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtChem));
-    logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtOut));
+    logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(snapshotInterval));
     
     // Config-file parser
     //logger.logMsg(PRODUCTION, "Reading configuration");
@@ -255,7 +279,7 @@ int main(int argc, const char **argv)
     rnaWriter.advanceSeries();
     transcriptionWriter.advanceSeries();
     //
-    double nextOutputTime = dtOut;
+    double nextOutputTime = snapshotInterval;
     double nextChemTime = dtChem;
     unsigned long swapAttempts = 0;
     unsigned long swapsPerformed = 0;
@@ -264,40 +288,12 @@ int main(int argc, const char **argv)
 //    bool cutoffTookPlace = false;
     while (t < endTime)
     {
-        if (eventSchedule.check(t))
+        if (cutoffSchedule.check(t))
         {
-            auto eventsToApply = eventSchedule.getEventsToApply(t);
-            for (auto event : eventsToApply)
-            {
-                if (event == FLAVOPIRIDOL)
-                {
-                    logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Flavopiridol condition");
-                    microemulsion.setKChromPlus(0);
-                }
-                else if (event == ACTINOMYCIN_D)
-                {
-                    logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Actinomycin D condition");
-                    microemulsion.setKChromPlus(0);
-                    microemulsion.setKChromMinus(0);
-                    microemulsion.setKRnaPlus(0);
-                }
-                else if (event == ACTIVATE)
-                {
-                    logger.logEvent(PRODUCTION, t, "CUTOFF: Activating transcription");
-                    microemulsion.setKChromPlus(kChromPlus);
-                    microemulsion.setKChromMinus(kChromMinus);
-                    microemulsion.setKRnaPlus(kRnaPlus);
-                    microemulsion.setKRnaMinus(kRnaMinus);
-                }
-                else
-                {
-                    // Testing playground here...
-                    logger.logEvent(PRODUCTION, t, "CUTOFF: Applying custom cutoff conditions");
-//            microemulsion.setKRnaMinus(0);
-                    microemulsion.setTranscriptionInhibitionOnChains(allChains, TRANSCRIPTION_POSSIBLE);
-                    microemulsion.setTranscriptionInhibitionOnChains(cutoffChains, TRANSCRIPTION_INHIBITED);
-                }
-            }
+            applyCutoffEvents(logger, cutoffSchedule, microemulsion,
+                              allChains, cutoffChains,
+                              kChromPlus, kChromMinus, kRnaPlus, kRnaMinus,
+                              t);
         }
         // Time-stepping loop
         while (t < nextOutputTime)
@@ -315,26 +311,72 @@ int main(int argc, const char **argv)
         }
         
         // Writing this step to file
-        //todo: Extend info logged in simulation summary to include chem reaction
-        logger.logEvent(PRODUCTION, t,
-                        "Simulation summary: %s=%ld "
-                        "| %s=%ld "
-                        "| swapRatio=%f "
-                        "| %s=%ld ",
-                        DUMP(swapAttempts), DUMP(swapsPerformed),
-                        (double) swapsPerformed / swapAttempts,
-                        DUMP(chemChangesPerformed));
-        dnaWriter.write(t);
-        rnaWriter.write(t);
-        transcriptionWriter.write(t);
-        dnaWriter.advanceSeries();
-        rnaWriter.advanceSeries();
-        transcriptionWriter.advanceSeries();
+        takeSnapshots(logger, dnaWriter, rnaWriter, transcriptionWriter, t, swapAttempts, swapsPerformed,
+                      chemChangesPerformed);
         // Advance output timer
-        nextOutputTime += dtOut;
+        nextOutputTime += snapshotInterval;
     }
     logger.logEvent(DEBUG, t, "Exiting main time-stepping loop");
     
     //
     return 0;
 }
+
+void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
+                       const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kChromPlus,
+                       double kChromMinus, double kRnaPlus, double kRnaMinus, double t)
+{
+    auto eventsToApply = eventSchedule.getEventsToApply(t);
+    for (auto event : eventsToApply)
+    {
+        if (event == FLAVOPIRIDOL)
+        {
+            logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Flavopiridol condition");
+            microemulsion.setKChromPlus(0);
+        }
+        else if (event == ACTINOMYCIN_D)
+        {
+            logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Actinomycin D condition");
+            microemulsion.setKChromPlus(0);
+            microemulsion.setKChromMinus(0);
+            microemulsion.setKRnaPlus(0);
+        }
+        else if (event == ACTIVATE)
+        {
+            logger.logEvent(PRODUCTION, t, "CUTOFF: Activating transcription");
+            microemulsion.setKChromPlus(kChromPlus);
+            microemulsion.setKChromMinus(kChromMinus);
+            microemulsion.setKRnaPlus(kRnaPlus);
+            microemulsion.setKRnaMinus(kRnaMinus);
+        }
+        else
+        {
+            // Testing playground here...
+            logger.logEvent(PRODUCTION, t, "CUTOFF: Applying custom cutoff conditions");
+//            microemulsion.setKRnaMinus(0);
+            microemulsion.setTranscriptionInhibitionOnChains(allChains, TRANSCRIPTION_POSSIBLE);
+            microemulsion.setTranscriptionInhibitionOnChains(cutoffChains, TRANSCRIPTION_INHIBITED);
+        }
+    }
+}
+
+void takeSnapshots(Logger &logger, PgmWriter &dnaWriter, PgmWriter &rnaWriter, PgmWriter &transcriptionWriter, double t,
+                   unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed)
+{
+    logger.logEvent(PRODUCTION, t,
+                    "Simulation summary: %s=%ld "
+                    "| %s=%ld "
+                    "| swapRatio=%f "
+                    "| %s=%ld ",
+                    DUMP(swapAttempts), DUMP(swapsPerformed),
+                    (double) swapsPerformed / swapAttempts,
+                    DUMP(chemChangesPerformed));
+    dnaWriter.write(t);
+    rnaWriter.write(t);
+    transcriptionWriter.write(t);
+    dnaWriter.advanceSeries();
+    rnaWriter.advanceSeries();
+    transcriptionWriter.advanceSeries();
+}
+
+//eof

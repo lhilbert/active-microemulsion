@@ -2,18 +2,20 @@
 // Created by tommaso on 13/09/18.
 //
 
-#include "CutoffEventSchedule.h"
+#include "EventSchedule.h"
 
-void CutoffEventSchedule::addEvent(double time, CutoffEventType eventType)
+template <typename EventType>
+void EventSchedule<EventType>::addEvent(double time, EventType eventType)
 {
     schedule[time].push_back(eventType);
 }
 
-void CutoffEventSchedule::addEvents(std::vector<double> times, CutoffEventType eventType)
+template <typename EventType>
+void EventSchedule<EventType>::addEvents(std::vector<double> times, EventType eventType)
 {
     if (times.empty())
     {
-        addEvent(defaultCutoffTime, eventType);
+        addEvent(defaultEventTime, eventType);
     }
     else
     {
@@ -24,9 +26,10 @@ void CutoffEventSchedule::addEvents(std::vector<double> times, CutoffEventType e
     }
 }
 
-std::vector<CutoffEventType> CutoffEventSchedule::getEventsToApply(double t)
+template <typename EventType>
+std::vector<EventType> EventSchedule<EventType>::getEventsToApply(double t)
 {
-    std::vector<CutoffEventType> result;
+    std::vector<EventType> result;
     auto endIt = schedule.upper_bound(t);
     for (auto it = schedule.begin(); it != endIt; ++it)
     {
@@ -38,12 +41,15 @@ std::vector<CutoffEventType> CutoffEventSchedule::getEventsToApply(double t)
     return result;
 }
 
-unsigned int CutoffEventSchedule::size()
+template <typename EventType>
+unsigned long EventSchedule<EventType>::size()
 {
     return schedule.size();
 }
 
-bool CutoffEventSchedule::check(double t)
+template <typename EventType>
+bool EventSchedule<EventType>::check(double t)
 {
     return t >= nextEventTime;
 }
+

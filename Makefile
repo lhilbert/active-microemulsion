@@ -10,7 +10,7 @@ OBJ = src/main.o \
       src/ChainConfig.o \
       src/PgmWriter.o \
       src/Microemulsion.o \
-      src/CutoffEventSchedule.o
+      src/EventSchedule.o
 
 all:  $(OBJ)
 	$(CC) $(CFLAGS) -o active-microemulsion $(OBJ) $(LIBS)
@@ -27,4 +27,4 @@ src/Microemulsion.o     : src/Microemulsion.h src/Grid.h src/Logger.h
 src/PgmWriter.o         : src/PgmWriter.h src/CellData.h
 src/Timing.o            : src/Timing.h
 
-src/main.o              : src/Logger.h src/Grid.h src/Microemulsion.h src/PgmWriter.h src/ChainConfig.h src/CutoffEventSchedule.h
+src/main.o              : src/Logger.h src/Grid.h src/Microemulsion.h src/PgmWriter.h src/ChainConfig.h src/EventSchedule.h
