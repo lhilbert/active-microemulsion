@@ -46,9 +46,10 @@ class FileSequence:
 
 
 class Analysis:
-    def __init__(self, fileSequence, blurRadius=3):
+    def __init__(self, fileSequence, blurRadius=3, quiet=False):
         self.fileSequence = fileSequence
         self.blurRadius = blurRadius
+        self.quiet=quiet
         self.deltaT = 1
         self.skip = 0
         self.resultsKeys = ['SnapshotNumber', 'CoV', 'MeanIntensity']
@@ -56,6 +57,7 @@ class Analysis:
         self.resultMatrix = None  # This will contain the numpy.ndarray of the results for easy slicing
         self.resultDict = {"id": [], "cov": [], "meanIntensity": []}
         self.__analyzeSequence(self.fileSequence)
+        self.numSamples = len(self.results)
 
     def __analyzeSnapshot(self, snapshotNum, snapshotFile):
         img = cv2.imread(snapshotFile)
@@ -65,7 +67,8 @@ class Analysis:
         blurredImg = cv2.GaussianBlur(img, (self.blurRadius, self.blurRadius), 0)
         cov, mean = computeCov(blurredImg)
         self.results.append([snapshotNum, cov, mean])
-        print("> %s : CoV = %f, meanIntensity = %f" % (os.path.basename(snapshotFile), cov, mean))
+        if not self.quiet:
+            print("> %s : CoV = %f, meanIntensity = %f" % (os.path.basename(snapshotFile), cov, mean))
 
     def __analyzeSequence(self, fileSequence):
         for id, item in enumerate(fileSequence):
@@ -94,6 +97,9 @@ class Analysis:
         :return: None
         """
         self.deltaT = deltaT
+
+    def getNumSamples(self):
+        return self.numSamples
 
     def getX(self):
         return [self.deltaT * x for x in self.resultDict["id"][self.skip:]]
@@ -155,7 +161,7 @@ class CsvWriter:
 
 if __name__ == "__main__":
     # Manage command line arguments
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("inputFiles", help="The image file to perform measurements on", nargs='+')
     parser.add_argument("-b", "--blur-radius", help="Radius of gaussian blur", dest="blurRadius", type=int, default=3)
     parser.add_argument("-m", "--moving-average-window",
@@ -183,10 +189,26 @@ if __name__ == "__main__":
                         dest="scriptMode", action='store_true')
 
     args = parser.parse_args()
+    # Extract the base directory, so that we can by default save plot and data there
+    inputDirectory = os.path.dirname(args.inputFiles[0])
+
+    # Using input dir for plot if none was explicitly passed
+    plotDirectory, plotFilename = os.path.split(args.plotFileName)
+    if not plotDirectory:
+        plotDirectory = inputDirectory
+    args.plotFileName = os.path.join(plotDirectory, plotFilename)
+
+    # Using input dir for csv if none was explicitly passed
+    csvDirectory, csvFilename = os.path.split(args.csvFileName)
+    if not csvDirectory:
+        csvDirectory = inputDirectory
+    args.csvFileName = os.path.join(csvDirectory, csvFilename)
+
     # Expanding and sorting the file list
     fileSequence = FileSequence.expandSequence(args.inputFiles)
-    #
-    analysis = Analysis(fileSequence, blurRadius=args.blurRadius)
+
+    # Perform the actual analysis
+    analysis = Analysis(fileSequence, blurRadius=args.blurRadius, quiet=args.scriptMode)
     analysis.setSkip(1)
     analysis.setDeltaT(args.deltaT)
 
@@ -219,7 +241,7 @@ if __name__ == "__main__":
         plotter.ax.annotate('Transcription ON @ x=%d' % (activateTime),
                             xy=(activateTime, nearestValueToActivation + 0.03 * plotter.plotHeight),
                             xytext=(
-                            activateTime - 10 * analysis.deltaT, nearestValueToActivation + 0.2 * plotter.plotHeight),
+                                activateTime - 10 * analysis.deltaT, nearestValueToActivation + 0.2 * plotter.plotHeight),
                             arrowprops=dict(facecolor='black', shrink=1))
 
     for event in ["flavopiridol", "actinomycinD"]:
@@ -231,7 +253,7 @@ if __name__ == "__main__":
             plotter.ax.annotate('%s @ x=%d' % (event.capitalize(), eventTime),
                                 xy=(eventTime, nearestValueToEvent - 0.03 * plotter.plotHeight),
                                 xytext=(
-                                eventTime - 10 * analysis.deltaT, nearestValueToEvent - 0.2 * plotter.plotHeight),
+                                    eventTime - 10 * analysis.deltaT, nearestValueToEvent - 0.2 * plotter.plotHeight),
                                 arrowprops=dict(facecolor='green', shrink=1))
 
     cutoffTime = args.cutoff
@@ -244,4 +266,7 @@ if __name__ == "__main__":
                             xytext=(cutoffTime - 10, nearestValueToCutoff - 0.2 * plotter.plotHeight),
                             arrowprops=dict(facecolor='green', shrink=1))
     plotter.plot()
+
+    print("Plot saved at %s" %(args.plotFileName))
+    print("Data saved at %s" %(args.csvFileName))
 # eof
