@@ -5,51 +5,19 @@
 #
 
 import argparse
-import glob
+import os
 
 import cv2
 import numpy as np
-# from scipy import signal
-import os
-from matplotlib import pyplot as plt
-from natsort import natsorted
-import csv
 
-
-def computeCov(data):
-    mean = np.mean(data)
-    return np.std(data) / mean, mean
-
-
-def getEntryNearestToValue(givenList, value):
-    return min(givenList, key=lambda x: abs(x - value))
-
-
-class FileSequence:
-    @staticmethod
-    def natsort(sequence):
-        return natsorted(sequence)
-
-    @staticmethod
-    def expand(pattern):
-        return FileSequence.natsort(glob.glob(pattern))
-
-    @staticmethod
-    def expandSequence(inputFileSequence):
-        fileSequence = []
-        for f in inputFileSequence:
-            if '*' in f:  # In this case f is a pattern to expand
-                fileSequence.extend(FileSequence.expand(f))
-            else:
-                fileSequence.append(f)
-        return FileSequence.natsort(fileSequence)
+from utilsLib import Plotter, computeCov, getEntryNearestToValue, FileSequence, CsvWriter
 
 
 class Analysis:
     def __init__(self, fileSequence, blurRadius=3, quiet=False):
         self.fileSequence = fileSequence
         self.blurRadius = blurRadius
-        self.quiet=quiet
+        self.quiet = quiet
         self.deltaT = 1
         self.skip = 0
         self.resultsKeys = ['SnapshotNumber', 'CoV', 'MeanIntensity']
@@ -109,54 +77,6 @@ class Analysis:
 
     def getMeanIntensity(self):
         return self.resultDict["meanIntensity"][self.skip:]
-
-
-class Plotter:
-    def __init__(self, X, plotFileName="plot.svg", interactive=True):
-        self.X = X
-        self.plotFileName = plotFileName
-        self.interactive = interactive
-        self.Ys = []
-        self.offsets = {}
-        self.plotHeight = 0
-        self.fig, self.ax = plt.subplots()
-        self.ax.spines['right'].set_visible(False)
-        self.ax.spines['top'].set_visible(False)
-        self.ax.xaxis.set_ticks_position('bottom')
-        self.ax.yaxis.set_ticks_position('left')
-
-    def addYSeries(self, Y, xOffset=0):
-        self.Ys.append(Y)
-        self.plotHeight = np.max([np.max(y) for y in self.Ys]) - np.min([np.min(y) for y in self.Ys])
-        if xOffset > 0:
-            self.offsets[len(self.Ys) - 1] = xOffset
-
-    def plot(self):
-        for id, Y in enumerate(self.Ys):
-            if id in self.offsets.keys():
-                offset = self.offsets[id]
-                self.ax.plot(self.X[offset:-offset], Y)
-            else:
-                self.ax.plot(self.X, Y)
-
-        if self.interactive:  # Here switch interactive mode off for matplotlib
-            plt.show()
-        else:
-            plt.ioff()
-
-        self.fig.savefig(self.plotFileName)
-
-
-class CsvWriter:
-    def __init__(self, keys, dataMatrix):
-        self.keys = keys
-        self.data = dataMatrix
-
-    def write(self, fileName):
-        with open(fileName, 'w') as csvfile:
-            datawriter = csv.writer(csvfile)
-            datawriter.writerow(self.keys)
-            datawriter.writerows(self.data)
 
 
 if __name__ == "__main__":
@@ -223,7 +143,9 @@ if __name__ == "__main__":
     offsetMA = int((maWindow - 1) / 2)
 
     # Plotting
-    plotter = Plotter(analysis.getX(), plotFileName=args.plotFileName, interactive=(not args.scriptMode))
+    plotter = Plotter(analysis.getX(), plotFileName=args.plotFileName,
+                      xlabel="Time", ylabel="CoV",
+                      interactive=(not args.scriptMode))
     plotter.addYSeries(analysis.getCov())
     plotter.addYSeries(MA, offsetMA)
     # Annotation
@@ -241,7 +163,8 @@ if __name__ == "__main__":
         plotter.ax.annotate('Transcription ON @ x=%d' % (activateTime),
                             xy=(activateTime, nearestValueToActivation + 0.03 * plotter.plotHeight),
                             xytext=(
-                                activateTime - 10 * analysis.deltaT, nearestValueToActivation + 0.2 * plotter.plotHeight),
+                                activateTime - 10 * analysis.deltaT,
+                                nearestValueToActivation + 0.2 * plotter.plotHeight),
                             arrowprops=dict(facecolor='black', shrink=1))
 
     for event in ["flavopiridol", "actinomycinD"]:
@@ -267,6 +190,6 @@ if __name__ == "__main__":
                             arrowprops=dict(facecolor='green', shrink=1))
     plotter.plot()
 
-    print("Plot saved at %s" %(args.plotFileName))
-    print("Data saved at %s" %(args.csvFileName))
+    print("Plot saved at %s" % (args.plotFileName))
+    print("Data saved at %s" % (args.csvFileName))
 # eof
