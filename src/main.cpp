@@ -285,7 +285,6 @@ int main(int argc, const char **argv)
     unsigned long swapsPerformed = 0;
     unsigned long chemChangesPerformed = 0;
     logger.logEvent(INFO, t, "Entering main time-stepping loop");
-//    bool cutoffTookPlace = false;
     while (t < endTime)
     {
         if (cutoffSchedule.check(t))

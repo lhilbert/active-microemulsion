@@ -44,17 +44,14 @@ void PgmWriter::advanceSeries()
 {
     if (pgm != nullptr)
     {
-        std::fclose(pgm);
         ++counter; // If we just initialized the class, there is no need to increment counter!
     }
     outputFileFullName = outputFileName + "_" + std::to_string(counter) + ".pgm";
-    pgm = std::fopen(outputFileFullName.data(), "wb");
-    
 }
 
 PgmWriter::~PgmWriter()
 {
-    std::fclose(pgm);
+//    std::fclose(pgm);
 }
 
 unsigned int PgmWriter::getCounter()
@@ -69,6 +66,7 @@ const char *PgmWriter::getOutputFileFullNameCstring()
 
 void PgmWriter::__write()
 {
+    pgm = std::fopen(outputFileFullName.data(), "wb");
     fprintf(pgm, "P2\n");
     fprintf(pgm, "# Channel: %s\n", channelName.data());
     fprintf(pgm, "# 0 - NoSignal\n");
@@ -99,5 +97,6 @@ void PgmWriter::__write()
         fprintf(pgm, "%s", buffer);
     }
     delete[] buffer;
+    std::fclose(pgm);
 }
 
