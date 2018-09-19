@@ -172,7 +172,7 @@ int main(int argc, const char **argv)
     
     // Populate the extra snapshots' schedule
     EventSchedule<SnapshotEvent> extraSnapshotSchedule(cutoffTime);
-    if (extraSnapshotTimeOffset >= 0 && extraSnapshotTimeOffset < endTime && cutoffSchedule.size() > 0)
+    if (extraSnapshotTimeOffset >= 0 && extraSnapshotTimeOffset <= endTime && cutoffSchedule.size() > 0)
     {
         if (allExtraSnapshots)
         {
@@ -328,13 +328,6 @@ int main(int argc, const char **argv)
                               kChromPlus, kChromMinus, kRnaPlus, kRnaMinus,
                               t);
         }
-        if (extraSnapshotSchedule.check(t))
-        {
-            extraSnapshotSchedule.popEventsToApply(
-                    t); // Throwing the return value away since we are just going to take 1 extra snapshot per time
-            takeSnapshots(logger, dnaWriter, rnaWriter, transcriptionWriter, t, swapAttempts,
-                          swapsPerformed, chemChangesPerformed, true);
-        }
         // Time-stepping loop
         while (t < nextOutputTime)
         {
@@ -353,6 +346,14 @@ int main(int argc, const char **argv)
         // Writing this step to file
         takeSnapshots(logger, dnaWriter, rnaWriter, transcriptionWriter, t, swapAttempts, swapsPerformed,
                       chemChangesPerformed);
+        // Writing extra snapshot if required
+        if (extraSnapshotSchedule.check(t))
+        {
+            extraSnapshotSchedule.popEventsToApply(
+                    t); // Throwing the return value away since we are just going to take 1 extra snapshot per time
+            takeSnapshots(logger, dnaWriter, rnaWriter, transcriptionWriter, t, swapAttempts,
+                          swapsPerformed, chemChangesPerformed, true);
+        }
         // Advance output timer
         nextOutputTime += snapshotInterval;
     }
