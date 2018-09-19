@@ -11,195 +11,111 @@ import cv2
 import numpy as np
 import os
 
-from utilsLib import Plotter, getEntryNearestToValue, FileSequence, CsvWriter
+from utilsLib import Plotter, getEntryNearestToValue, FileSequence, CsvWriter, CurveAnalysis
 
+# Manage command line arguments
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("inputDir", help="The input folder where to look for Trx and RNA "
+                                     "snapshots (overridden by -T and -R)", nargs='?')
+parser.add_argument("-T", "--trx-input-files",
+                    help="The image file to perform measurements on, transcription channel",
+                    nargs='+', dest="trxInputFiles")
+parser.add_argument("-R", "--rna-input-files", help="The image file to perform measurements on, RNA channel",
+                    nargs='+', dest="rnaInputFiles")
+parser.add_argument("-b", "--blur-radius", help="Radius of gaussian blur", dest="blurRadius", type=int, default=3)
+parser.add_argument("-m", "--moving-average-window",
+                    help="Length of the moving average window. NOTE: It must be an ODD number",
+                    dest="movingAvgWindow", type=int, default=7)
+parser.add_argument("-t", "--time-mapping", help="Time interval between snapshots", dest="deltaT", type=float,
+                    default=1)
+parser.add_argument("-c", "--cutoff-time", help="Time point at which a generic cutoff took place", dest="cutoff",
+                    type=float,
+                    default=-1)
+parser.add_argument("--flavopiridol", help="Time point at which Flavopiridol was applied", dest="flavopiridol",
+                    type=float,
+                    default=-1)
+parser.add_argument("--actinomycin-D", help="Time point at which Actinomycin D was applied", dest="actinomycinD",
+                    type=float,
+                    default=-1)
+parser.add_argument("--activate", help="Time point at which transcription is activated", dest="activate",
+                    type=float,
+                    default=-1)
+parser.add_argument("-p", "--plot", help="Name of the desired output file for the generated plot",
+                    dest="plotFileName", default="trxRna_plot.svg")
+parser.add_argument("-d", "--csv", help="Name of the desired output csv for the data",
+                    dest="csvFileName", default="trxRna_results.csv")
+parser.add_argument("-s", "--script-mode", help="Run non-interactive. For embedding into scripts.",
+                    dest="scriptMode", action='store_true')
 
-class Analysis:
-    def __init__(self, transcriptionFileSequence, rnaFileSequence, blurRadius=3, quiet=False):
-        self.rnaFileSequence = rnaFileSequence
-        self.transcriptionFileSequence = transcriptionFileSequence
-        self.blurRadius = blurRadius
-        self.quiet = quiet
-        self.deltaT = 1
-        self.skip = 0
-        self.resultsKeys = ['SnapshotNumber', 'TrxIntensity', 'RnaIntensity']
-        self.results = []  # List of [snapshotNumber, CoV, meanIntensity] elements
-        self.resultMatrix = None  # This will contain the numpy.ndarray of the results for easy slicing
-        self.resultDict = {"id": [], "trxIntensity": [], "rnaIntensity": []}
-        self.__analyzeSequence(self.transcriptionFileSequence, self.rnaFileSequence)
-        self.numSamples = len(self.results)
+args = parser.parse_args()
 
-    def __analyzeSnapshot(self, snapshotNum, trxSnapshotFile, rnaSnapshotFile):
-        trxImg = cv2.imread(trxSnapshotFile)
-        rnaImg = cv2.imread(rnaSnapshotFile)
-        if type(trxImg) == type(None):
-            print("WARNING: Image %s cannot be read. Ignoring it." % (trxSnapshotFile))
-            return
-        if type(rnaImg) == type(None):
-            print("WARNING: Image %s cannot be read. Ignoring it." % (rnaSnapshotFile))
-            return
-        blurredTrxImg = cv2.GaussianBlur(trxImg, (self.blurRadius, self.blurRadius), 0)
-        blurredRnaImg = cv2.GaussianBlur(rnaImg, (self.blurRadius, self.blurRadius), 0)
-        # cov, mean = computeCov(blurredTrxImg)
-        trxMean, rnaMean = np.mean(blurredTrxImg), np.mean(blurredRnaImg)
-        self.results.append([snapshotNum, trxMean, rnaMean])
-        if not self.quiet:
-            print("> %s : trxIntensity = %f, rnaIntensity = %f" % (os.path.basename(trxSnapshotFile), trxMean, rnaMean))
+# Manage the inputDir vs. -T/-R flags
+if (not args.trxInputFiles) or (not args.rnaInputFiles):
+    if not args.inputDir:
+        print("ERROR: You either need to pass the inputDir or the -T & -R flags!")
+        exit(1)
+    args.trxInputFiles = [os.path.join(args.inputDir, "microemulsion_Transcription_*")]
+    args.rnaInputFiles = [os.path.join(args.inputDir, "microemulsion_RNA_*")]
 
-    def __analyzeSequence(self, trxFileSequence, rnaFileSequence):
-        for id, (trx, rna) in enumerate(zip(trxFileSequence, rnaFileSequence)):
-            self.__analyzeSnapshot(id, trx, rna)
-        self.resultMatrix = np.array(self.results)
-        self.resultDict["id"] = list(self.resultMatrix[:, 0])
-        self.resultDict["trxIntensity"] = list(self.resultMatrix[:, 1])
-        self.resultDict["rnaIntensity"] = list(self.resultMatrix[:, 2])
+# Extract the base directory, so that we can by default save plot and data there
+inputDirectory = os.path.dirname(args.trxInputFiles[0])
 
-    @staticmethod
-    def computeMovingAverage(sequence, windowSize):
-        return np.convolve(sequence, np.ones((windowSize,)) / windowSize, mode='valid')
+# Using input dir for plot if none was explicitly passed
+plotDirectory, plotFilename = os.path.split(args.plotFileName)
+if not plotDirectory:
+    plotDirectory = inputDirectory
+args.plotFileName = os.path.join(plotDirectory, plotFilename)
 
-    def setSkip(self, skip=0):
-        """
-        Set the number of initial entries to skip when getting the results.
-        :param skip: Positive integer
-        :return: None
-        """
-        self.skip = skip
+# Using input dir for csv if none was explicitly passed
+csvDirectory, csvFilename = os.path.split(args.csvFileName)
+if not csvDirectory:
+    csvDirectory = inputDirectory
+args.csvFileName = os.path.join(csvDirectory, csvFilename)
 
-    def setDeltaT(self, deltaT=1):
-        """
-        Set the time mapping corresponding to a single timestep.
-        :param deltaT: Positive integer
-        :return: None
-        """
-        self.deltaT = deltaT
+# Expanding and sorting the file list
+trxFileSequence = FileSequence.expandSequence(args.trxInputFiles)
+rnaFileSequence = FileSequence.expandSequence(args.rnaInputFiles)
 
-    def getNumSamples(self):
-        return self.numSamples
+# Perform the actual analysis
+analysis = CurveAnalysis(trxFileSequence, rnaFileSequence, blurRadius=args.blurRadius, quiet=args.scriptMode)
+analysis.setDeltaT(args.deltaT)
 
-    def getSnapshotNumber(self):
-        return [self.deltaT * x for x in self.resultDict["id"][self.skip:]]
+# Write analysis data to CSV
+CsvWriter(analysis.resultsKeys, analysis.results).write(args.csvFileName)
 
-    def getTrxIntensity(self):
-        return self.resultDict["trxIntensity"][self.skip:]
+# Plotting
+plotter = Plotter(analysis.getXData(), plotFileName=args.plotFileName,
+                  xlabel="Transcription Intensity", ylabel="RNA Intensity",
+                  interactive=(not args.scriptMode))
 
-    def getRnaIntensity(self):
-        return self.resultDict["rnaIntensity"][self.skip:]
+if args.flavopiridol:
+    eventTime = args.flavopiridol
+    eventIndex = analysis.getSnapshotNumber().index(getEntryNearestToValue(analysis.getSnapshotNumber(), eventTime))
+    plotter.addYSeries(analysis.getYData()[:eventIndex+1])
+    plotter.addYSeries(analysis.getYData()[eventIndex:], xOffset=eventIndex, dashes=[4, 1])
+elif args.actinomycinD:
+    eventTime = args.actinomycinD
+    eventIndex = analysis.getSnapshotNumber().index(getEntryNearestToValue(analysis.getSnapshotNumber(), eventTime))
+    plotter.addYSeries(analysis.getYData()[:eventIndex+1])
+    plotter.addYSeries(analysis.getYData()[eventIndex:], xOffset=eventIndex, dashes=[4, 1])
+else:
+    plotter.addYSeries(analysis.getYData())
 
-
-if __name__ == "__main__":
-    # Manage command line arguments
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("inputDir", help="The input folder where to look for Trx and RNA "
-                                         "snapshots (overridden by -T and -R)", nargs='?')
-    parser.add_argument("-T", "--trx-input-files",
-                        help="The image file to perform measurements on, transcription channel",
-                        nargs='+', dest="trxInputFiles")
-    parser.add_argument("-R", "--rna-input-files", help="The image file to perform measurements on, RNA channel",
-                        nargs='+', dest="rnaInputFiles")
-    parser.add_argument("-b", "--blur-radius", help="Radius of gaussian blur", dest="blurRadius", type=int, default=3)
-    parser.add_argument("-m", "--moving-average-window",
-                        help="Length of the moving average window. NOTE: It must be an ODD number",
-                        dest="movingAvgWindow", type=int, default=7)
-    parser.add_argument("-t", "--time-mapping", help="Time interval between snapshots", dest="deltaT", type=float,
-                        default=1)
-    parser.add_argument("-c", "--cutoff-time", help="Time point at which a generic cutoff took place", dest="cutoff",
-                        type=float,
-                        default=-1)
-    parser.add_argument("--flavopiridol", help="Time point at which Flavopiridol was applied", dest="flavopiridol",
-                        type=float,
-                        default=-1)
-    parser.add_argument("--actinomycin-D", help="Time point at which Actinomycin D was applied", dest="actinomycinD",
-                        type=float,
-                        default=-1)
-    parser.add_argument("--activate", help="Time point at which transcription is activated", dest="activate",
-                        type=float,
-                        default=-1)
-    parser.add_argument("-p", "--plot", help="Name of the desired output file for the generated plot",
-                        dest="plotFileName", default="trxRna_plot.svg")
-    parser.add_argument("-d", "--csv", help="Name of the desired output csv for the data",
-                        dest="csvFileName", default="trxRna_results.csv")
-    parser.add_argument("-s", "--script-mode", help="Run non-interactive. For embedding into scripts.",
-                        dest="scriptMode", action='store_true')
-
-    args = parser.parse_args()
-
-    # Manage the inputDir vs. -T/-R flags
-    if (not args.trxInputFiles) or (not args.rnaInputFiles):
-        if not args.inputDir:
-            print("ERROR: You either need to pass the inputDir or the -T & -R flags!")
-            exit(1)
-        args.trxInputFiles = [os.path.join(args.inputDir, "microemulsion_Transcription_*")]
-        args.rnaInputFiles = [os.path.join(args.inputDir, "microemulsion_RNA_*")]
-
-    # Extract the base directory, so that we can by default save plot and data there
-    inputDirectory = os.path.dirname(args.trxInputFiles[0])
-
-    # Using input dir for plot if none was explicitly passed
-    plotDirectory, plotFilename = os.path.split(args.plotFileName)
-    if not plotDirectory:
-        plotDirectory = inputDirectory
-    args.plotFileName = os.path.join(plotDirectory, plotFilename)
-
-    # Using input dir for csv if none was explicitly passed
-    csvDirectory, csvFilename = os.path.split(args.csvFileName)
-    if not csvDirectory:
-        csvDirectory = inputDirectory
-    args.csvFileName = os.path.join(csvDirectory, csvFilename)
-
-    # Expanding and sorting the file list
-    trxFileSequence = FileSequence.expandSequence(args.trxInputFiles)
-    rnaFileSequence = FileSequence.expandSequence(args.rnaInputFiles)
-
-    # Perform the actual analysis
-    analysis = Analysis(trxFileSequence, rnaFileSequence, blurRadius=args.blurRadius, quiet=args.scriptMode)
-    analysis.setDeltaT(args.deltaT)
-
-    # Write analysis data to CSV
-    CsvWriter(analysis.resultsKeys, analysis.results).write(args.csvFileName)
-
-    # Plotting
-    plotter = Plotter(analysis.getTrxIntensity(), plotFileName=args.plotFileName,
-                      xlabel="Transcription Intensity", ylabel="RNA Intensity",
-                      interactive=(not args.scriptMode))
-
-    for event in ["flavopiridol", "actinomycinD"]:
-        eventTime = getattr(args, event)
-        if eventTime > 0:
-            nearestTimeToEvent = getEntryNearestToValue(analysis.getSnapshotNumber(), eventTime)
-            nearestTrxToEvent = analysis.getTrxIntensity()[analysis.getSnapshotNumber().index(nearestTimeToEvent)]
-            nearestRnaToEvent = analysis.getRnaIntensity()[analysis.getSnapshotNumber().index(nearestTimeToEvent)]
-            plotter.ax.annotate('%s @ x=%d' % (event.capitalize(), eventTime),
-                                xy=(nearestTrxToEvent, nearestRnaToEvent),
-                                xytext=(
-                                    nearestTrxToEvent - int(0.15 * np.max(analysis.getTrxIntensity())),
-                                    nearestRnaToEvent + 0.1 * plotter.plotHeight),
-                                arrowprops=dict(facecolor='green', shrink=1))
-
-    if args.flavopiridol:
-        eventTime = args.flavopiridol
-        eventIndex = analysis.getSnapshotNumber().index(getEntryNearestToValue(analysis.getSnapshotNumber(), eventTime))
-        plotter.addYSeries(analysis.getRnaIntensity()[:eventIndex])
-        plotter.addYSeries(analysis.getRnaIntensity()[eventIndex:], xOffset=eventIndex, dashes=[4, 1])
-    elif args.actinomycinD:
-        eventTime = args.actinomycinD
-        eventIndex = analysis.getSnapshotNumber().index(getEntryNearestToValue(analysis.getSnapshotNumber(), eventTime))
-        plotter.addYSeries(analysis.getRnaIntensity()[:eventIndex])
-        plotter.addYSeries(analysis.getRnaIntensity()[eventIndex:], xOffset=eventIndex, dashes=[4, 1])
-    else:
-        plotter.addYSeries(analysis.getRnaIntensity())
-
-    cutoffTime = args.cutoff
-    if cutoffTime > 0:
-        nearestTimeToCutoff = getEntryNearestToValue(analysis.getSnapshotNumber(), cutoffTime)
-        # nearestValueToCutoff = analysis.getCov()[analysis.getX().index(nearestTimeToCutoff)]
-        nearestValueToCutoff = analysis.getRnaIntensity()[analysis.getSnapshotNumber().index(nearestTimeToCutoff)]
-        plotter.ax.annotate('Cutoff @ x=%d' % (cutoffTime),
-                            xy=(cutoffTime, nearestValueToCutoff - 0.03 * plotter.plotHeight),
-                            xytext=(cutoffTime - 10, nearestValueToCutoff - 0.2 * plotter.plotHeight),
+for event in ["flavopiridol", "actinomycinD", "cutoff"]:
+    eventTime = getattr(args, event)
+    if eventTime > 0:
+        nearestTimeToEvent = getEntryNearestToValue(analysis.getSnapshotNumber(), eventTime)
+        nearestXToEvent = analysis.getXData()[analysis.getSnapshotNumber().index(nearestTimeToEvent)]
+        nearestYToEvent = analysis.getYData()[analysis.getSnapshotNumber().index(nearestTimeToEvent)]
+        plotter.ax.annotate('%s @ x=%d' % (event.capitalize(), eventTime),
+                            xy=(nearestXToEvent, nearestYToEvent),
+                            xytext=(
+                                nearestXToEvent - 0.15 * np.max(analysis.getXData()),
+                                nearestYToEvent + 0.1 * plotter.plotHeight),
                             arrowprops=dict(facecolor='green', shrink=1))
-    plotter.plot()
 
-    print("Plot saved at %s" % (args.plotFileName))
-    print("Data saved at %s" % (args.csvFileName))
+plotter.plot()
+
+print("Plot saved at %s" % (args.plotFileName))
+print("Data saved at %s" % (args.csvFileName))
 # eof
