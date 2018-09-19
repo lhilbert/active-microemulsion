@@ -5,24 +5,24 @@
 #include "EventSchedule.h"
 
 template <typename EventType>
-void EventSchedule<EventType>::addEvent(double time, EventType eventType)
+void EventSchedule<EventType>::addEvent(double time, EventType eventType, double timeMultiplier)
 {
-    schedule[time].push_back(eventType);
+    schedule[time*timeMultiplier].push_back(eventType);
     nextEventTime = schedule.begin()->first;
 }
 
 template <typename EventType>
-void EventSchedule<EventType>::addEvents(std::vector<double> times, EventType eventType)
+void EventSchedule<EventType>::addEvents(std::vector<double> times, EventType eventType, double timeMultiplier)
 {
     if (times.empty())
     {
-        addEvent(defaultEventTime, eventType);
+        addEvent(defaultEventTime, eventType, timeMultiplier);
     }
     else
     {
         for (double t : times)
         {
-            addEvent(t, eventType);
+            addEvent(t, eventType, timeMultiplier);
         }
     }
 }

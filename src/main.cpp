@@ -46,6 +46,7 @@ int main(int argc, const char **argv)
             ("debug,d", "Enable the debug logging level")
             ("coarse-debug", "Enable the coarse_debug logging level")
             ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
+            ("minutes,m", "Time variables are expressed in minutes instead of seconds")
             ("no-chain-integrity", "Do not enforce chain integrity")
             ("no-sticky-boundary", "Do not make boundary sticky to chromatin")
             ("flavopiridol",
@@ -116,8 +117,19 @@ int main(int argc, const char **argv)
     bool flavopiridolSwitchPassed = varsMap.count("flavopiridol") > 0;
     bool actinomycinDSwitchPassed = varsMap.count("actinomycin-D") > 0;
     bool activateSwitchPassed = varsMap.count("activate") > 0;
+    bool isTimeInMinutes = varsMap.count("minutes") > 0;
 //    bool allExtraSnapshots = varsMap.count("all-extra-snapshots") > 0;
     bool allExtraSnapshots = false;
+    //
+    double timeMultiplier = 1;
+    if (isTimeInMinutes)
+    {
+        timeMultiplier = 60;
+    }
+    endTime *= timeMultiplier;
+    snapshotInterval *= timeMultiplier;
+    extraSnapshotTimeOffset *= timeMultiplier;
+    cutoffTime *= timeMultiplier;
     //
     int numInnerCells = rows * columns;
     double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
@@ -128,7 +140,7 @@ int main(int argc, const char **argv)
     kSet.insert(kRnaPlus);
     kSet.insert(kRnaMinus);
     kMax = *kSet.rbegin(); // Get the maximum on the set
-    double dtChem = 0.1 / kMax;
+    double dtChem = (0.1 / kMax) * timeMultiplier;
     if (snapshotInterval <= 0) // Auto-compute it only if it was not set
     {
         snapshotInterval =
@@ -147,20 +159,20 @@ int main(int argc, const char **argv)
     EventSchedule<CutoffEvent> cutoffSchedule(cutoffTime);
     if (flavopiridolSwitchPassed)
     {
-        cutoffSchedule.addEvents(flavopiridolEvents, FLAVOPIRIDOL);
+        cutoffSchedule.addEvents(flavopiridolEvents, FLAVOPIRIDOL, timeMultiplier);
     }
     if (actinomycinDSwitchPassed)
     {
-        cutoffSchedule.addEvents(actinomycinDEvents, ACTINOMYCIN_D);
+        cutoffSchedule.addEvents(actinomycinDEvents, ACTINOMYCIN_D, timeMultiplier);
     }
     if (activateSwitchPassed)
     {
-        cutoffSchedule.addEvents(activationEvents, ACTIVATE);
+        cutoffSchedule.addEvents(activationEvents, ACTIVATE, timeMultiplier);
     }
     
     // Populate the extra snapshots' schedule
     EventSchedule<SnapshotEvent> extraSnapshotSchedule(cutoffTime);
-    if (extraSnapshotTimeOffset >= 0 && extraSnapshotTimeOffset < endTime)
+    if (extraSnapshotTimeOffset >= 0 && extraSnapshotTimeOffset < endTime && cutoffSchedule.size() > 0)
     {
         if (allExtraSnapshots)
         {
@@ -206,6 +218,7 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(quietMode));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(enforceChainIntegrity));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(stickyBoundary));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(isTimeInMinutes));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(flavopiridolSwitchPassed));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(actinomycinDSwitchPassed));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(activateSwitchPassed));

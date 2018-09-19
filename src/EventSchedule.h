@@ -39,9 +39,9 @@ public:
                                                     nextEventTime(std::numeric_limits<double>::max())
     {}
     
-    void addEvent(double time, EventType eventType);
+    void addEvent(double time, EventType eventType, double timeMultiplier=1);
     
-    void addEvents(std::vector<double> times, EventType eventType);
+    void addEvents(std::vector<double> times, EventType eventType, double timeMultiplier=1);
     
     bool check(double t);
     
