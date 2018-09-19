@@ -15,6 +15,7 @@ PgmWriter::PgmWriter(Logger &logger, int W, int H, std::string outputFile, std::
 {
     logger.logMsg(INFO, "Initializing PGM writer for channel %s", channelName.data());
     advanceSeries();
+    outputFileFullNameExtra = outputFileName + "_EXTRA.pgm";
 }
 
 void PgmWriter::setData(const CellData **newData)
@@ -22,22 +23,36 @@ void PgmWriter::setData(const CellData **newData)
     data = newData;
 }
 
-void PgmWriter::write()
+void PgmWriter::write(bool isExtraSnapshot)
 {
-    logger.logMsg(PRODUCTION, "Writing PGM file #%d, channel %s (%s)",
-                  getCounter(),
+    std::string pgmId = std::to_string(getCounter());
+    const char *writtenFname = getOutputFileFullNameCstring();
+    if (isExtraSnapshot)
+    {
+        pgmId = "EXTRA";
+        writtenFname = outputFileFullNameExtra.data();
+    }
+    logger.logMsg(PRODUCTION, "Writing PGM file #%s, channel %s (%s)",
+                  pgmId.data(),
                   channelName.data(),
-                  getOutputFileFullNameCstring());
-    __write();
+                  writtenFname);
+    __write(isExtraSnapshot);
 }
 
-void PgmWriter::write(double t)
+void PgmWriter::write(double t, bool isExtraSnapshot)
 {
-    logger.logEvent(PRODUCTION, t, "Writing PGM file #%d, channel %s (%s)",
-                    getCounter(),
+    std::string pgmId = std::to_string(getCounter());
+    const char *writtenFname = getOutputFileFullNameCstring();
+    if (isExtraSnapshot)
+    {
+        pgmId = "EXTRA";
+        writtenFname = outputFileFullNameExtra.data();
+    }
+    logger.logEvent(PRODUCTION, t, "Writing PGM file #%s, channel %s (%s)",
+                    pgmId.data(),
                     channelName.data(),
-                    getOutputFileFullNameCstring());
-    __write();
+                    writtenFname);
+    __write(isExtraSnapshot);
 }
 
 void PgmWriter::advanceSeries()
@@ -64,9 +79,16 @@ const char *PgmWriter::getOutputFileFullNameCstring()
     return outputFileFullName.data();
 }
 
-void PgmWriter::__write()
+void PgmWriter::__write(bool isExtraSnapshot)
 {
-    pgm = std::fopen(outputFileFullName.data(), "wb");
+    if (isExtraSnapshot)
+    {
+        pgm = std::fopen(outputFileFullNameExtra.data(), "wb");
+    }
+    else
+    {
+        pgm = std::fopen(outputFileFullName.data(), "wb");
+    }
     fprintf(pgm, "P2\n");
     fprintf(pgm, "# Channel: %s\n", channelName.data());
     fprintf(pgm, "# 0 - NoSignal\n");

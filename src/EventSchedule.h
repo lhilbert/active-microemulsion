@@ -18,6 +18,7 @@ typedef enum CutoffEvent
 
 typedef enum SnapshotEvent
 {
+    GENERIC_SNAPSHOT,
     ACTIVATE_SNAPSHOT,
     FLAVOPIRIDOL_SNAPSHOT,
     ACTINOMYCIN_D_SNAPSHOT,
@@ -43,7 +44,11 @@ public:
     
     bool check(double t);
     
-    std::vector<EventType> getEventsToApply(double t);
+    std::vector<EventType> popEventsToApply(double t);
+    
+    std::vector<double> getAllEventsTimes();
+    
+    double getLastEventTime();
     
     unsigned long size();
 };

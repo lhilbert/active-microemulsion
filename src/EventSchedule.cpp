@@ -2,12 +2,14 @@
 // Created by tommaso on 13/09/18.
 //
 
+#include <limits>
 #include "EventSchedule.h"
 
 template <typename EventType>
 void EventSchedule<EventType>::addEvent(double time, EventType eventType)
 {
     schedule[time].push_back(eventType);
+    nextEventTime = schedule.begin()->first;
 }
 
 template <typename EventType>
@@ -27,7 +29,7 @@ void EventSchedule<EventType>::addEvents(std::vector<double> times, EventType ev
 }
 
 template <typename EventType>
-std::vector<EventType> EventSchedule<EventType>::getEventsToApply(double t)
+std::vector<EventType> EventSchedule<EventType>::popEventsToApply(double t)
 {
     std::vector<EventType> result;
     auto endIt = schedule.upper_bound(t);
@@ -37,7 +39,14 @@ std::vector<EventType> EventSchedule<EventType>::getEventsToApply(double t)
         result.insert(result.end(), curTimeEventsVector.begin(), curTimeEventsVector.end());
     }
     schedule.erase(schedule.begin(), endIt);
-    nextEventTime = schedule.begin()->first;
+    if (schedule.empty())
+    {
+        nextEventTime = std::numeric_limits<double>::max();
+    }
+    else
+    {
+        nextEventTime = schedule.begin()->first;
+    }
     return result;
 }
 
@@ -51,5 +60,22 @@ template <typename EventType>
 bool EventSchedule<EventType>::check(double t)
 {
     return t >= nextEventTime;
+}
+
+template<typename EventType>
+std::vector<double> EventSchedule<EventType>::getAllEventsTimes()
+{
+    std::vector<double> times;
+    for (auto it = schedule.begin(); it != schedule.end(); ++it)
+    {
+        times.push_back(it->first);
+    }
+    return times;
+}
+
+template<typename EventType>
+double EventSchedule<EventType>::getLastEventTime()
+{
+    return schedule.rbegin()->first;
 }
 

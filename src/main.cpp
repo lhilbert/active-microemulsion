@@ -16,7 +16,8 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
                        double kChromMinus, double kRnaPlus, double kRnaMinus, double t);
 
 void takeSnapshots(Logger &logger, PgmWriter &dnaWriter, PgmWriter &rnaWriter, PgmWriter &transcriptionWriter, double t,
-                   unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed);
+                   unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed,
+                   bool isExtraSnapshot = false);
 
 int main(int argc, const char **argv)
 {
@@ -28,7 +29,7 @@ int main(int argc, const char **argv)
     int swapsPerPixelPerUnitTime = 500;
     int numVisualizationOutputs = 100; //todo read this from config
     double snapshotInterval = -1;
-//    double extraSnapshotTimeOffset = -1;
+    double extraSnapshotTimeOffset = -1;
     double omega = 0.5; //todo read this from config
     double kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kMax;
     std::set<double> kSet;
@@ -71,8 +72,9 @@ int main(int argc, const char **argv)
              "Time interval (in seconds) between visualization snapshots. A negative time lets the '-S' flag take over")
             ("number-snapshots,S", opt::value<int>(&numVisualizationOutputs)->default_value(100),
              "Number of visualization snapshots to take. Only applied if '-t' is negative or not set")
-//            ("extra-snapshot,e", opt::value<double>(&extraSnapshotTimeOffset)->default_value(1800),
-//                    "Time interval (in seconds) between cutoff events and their respective extra snapshot. A negative time disables the extra snapshot. The default value is 1800s = 30m")
+            ("extra-snapshot,e", opt::value<double>(&extraSnapshotTimeOffset)->default_value(1800),
+             "Time interval (in seconds) between cutoff events and their respective extra snapshot. A negative time disables the extra snapshot. The default value is 1800s = 30m")
+//            ("all-extra-snapshots", "Enables the extra snapshot for all events (it is enabled only for last one by default)")
             ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
             ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
             ("omega,w", opt::value<double>(&omega)->default_value(0.5),
@@ -111,9 +113,11 @@ int main(int argc, const char **argv)
     bool quietMode = varsMap.count("quiet") > 0;
     bool enforceChainIntegrity = varsMap.count("no-chain-integrity") == 0;
     bool stickyBoundary = varsMap.count("no-sticky-boundary") == 0;
-    bool flavopiridolSwitchPassed = varsMap.count("flavopiridol") != 0;
-    bool actinomycinDSwitchPassed = varsMap.count("actinomycin-D") != 0;
-    bool activateSwitchPassed = varsMap.count("activate") != 0;
+    bool flavopiridolSwitchPassed = varsMap.count("flavopiridol") > 0;
+    bool actinomycinDSwitchPassed = varsMap.count("actinomycin-D") > 0;
+    bool activateSwitchPassed = varsMap.count("activate") > 0;
+//    bool allExtraSnapshots = varsMap.count("all-extra-snapshots") > 0;
+    bool allExtraSnapshots = false;
     //
     int numInnerCells = rows * columns;
     double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
@@ -152,6 +156,23 @@ int main(int argc, const char **argv)
     if (activateSwitchPassed)
     {
         cutoffSchedule.addEvents(activationEvents, ACTIVATE);
+    }
+    
+    // Populate the extra snapshots' schedule
+    EventSchedule<SnapshotEvent> extraSnapshotSchedule(cutoffTime);
+    if (extraSnapshotTimeOffset >= 0)
+    {
+        if (allExtraSnapshots)
+        {
+            //todo
+            double lastEventTime = cutoffSchedule.getLastEventTime();
+            extraSnapshotSchedule.addEvent(lastEventTime + extraSnapshotTimeOffset, GENERIC_SNAPSHOT); //placeholder
+        }
+        else
+        {
+            double lastEventTime = cutoffSchedule.getLastEventTime();
+            extraSnapshotSchedule.addEvent(lastEventTime + extraSnapshotTimeOffset, GENERIC_SNAPSHOT);
+        }
     }
     
     // If output folder doesn't exist, create it
@@ -206,7 +227,7 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kRnaMinus));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kMax));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numVisualizationOutputs));
-//    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(extraSnapshotTimeOffset));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(extraSnapshotTimeOffset));
     
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dt));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtChem));
@@ -294,6 +315,13 @@ int main(int argc, const char **argv)
                               kChromPlus, kChromMinus, kRnaPlus, kRnaMinus,
                               t);
         }
+        if (extraSnapshotSchedule.check(t))
+        {
+            extraSnapshotSchedule.popEventsToApply(
+                    t); // Throwing the return value away since we are just going to take 1 extra snapshot per time
+            takeSnapshots(logger, dnaWriter, rnaWriter, transcriptionWriter, t, swapAttempts,
+                          swapsPerformed, chemChangesPerformed, true);
+        }
         // Time-stepping loop
         while (t < nextOutputTime)
         {
@@ -325,7 +353,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
                        const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kChromPlus,
                        double kChromMinus, double kRnaPlus, double kRnaMinus, double t)
 {
-    auto eventsToApply = eventSchedule.getEventsToApply(t);
+    auto eventsToApply = eventSchedule.popEventsToApply(t);
     for (auto event : eventsToApply)
     {
         if (event == FLAVOPIRIDOL)
@@ -360,7 +388,8 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
 }
 
 void takeSnapshots(Logger &logger, PgmWriter &dnaWriter, PgmWriter &rnaWriter, PgmWriter &transcriptionWriter, double t,
-                   unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed)
+                   unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed,
+                   bool isExtraSnapshot)
 {
     logger.logEvent(PRODUCTION, t,
                     "Simulation summary: %s=%ld "
@@ -370,12 +399,15 @@ void takeSnapshots(Logger &logger, PgmWriter &dnaWriter, PgmWriter &rnaWriter, P
                     DUMP(swapAttempts), DUMP(swapsPerformed),
                     (double) swapsPerformed / swapAttempts,
                     DUMP(chemChangesPerformed));
-    dnaWriter.write(t);
-    rnaWriter.write(t);
-    transcriptionWriter.write(t);
-    dnaWriter.advanceSeries();
-    rnaWriter.advanceSeries();
-    transcriptionWriter.advanceSeries();
+    dnaWriter.write(t, isExtraSnapshot);
+    rnaWriter.write(t, isExtraSnapshot);
+    transcriptionWriter.write(t, isExtraSnapshot);
+    if (!isExtraSnapshot)
+    {
+        dnaWriter.advanceSeries();
+        rnaWriter.advanceSeries();
+        transcriptionWriter.advanceSeries();
+    }
 }
 
 //eof
