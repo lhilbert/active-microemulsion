@@ -207,7 +207,8 @@ if __name__ == "__main__":
                         dest="oneActiveChain", action="store_true")
     parser.add_argument("--one-inhibited-chain", help="Set just one chain as inhibited (overrides the -I flag)",
                         dest="oneInhibitedChain",action="store_true")
-    parser.add_argument("-A", "--number-of-active-chains", help="The number of chromatin chains to be set as active",
+    parser.add_argument("-A", "--number-of-active-chains", help="The number of chromatin chains to be set as active ("
+                                                                "overrides the -I flag)",
                         dest="numActiveChains", type=int,
                         default=-1)
     parser.add_argument("-n", "--number-of-chains", help="The number of chromatin chains to be generated",

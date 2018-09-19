@@ -23,21 +23,30 @@ flagsToNameFilter()
     | sed s/"_\(flavopiridol\|actinomycin-D\|activate\)0_"/"_"/g
 }
 
+# Extract the chain config used, if any was passed
+getChainConfig()
+{
+    grep -o "-P [^ ]\+" \
+    | sed s/"-P "/""/
+}
+
 timestamp="$(date +%Y%m%d_%H%M%S)"
 
 OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_sge_${timestamp}_$$"
+CHAIN_CONF_FILE="$(echo ${CONFIG_FLAGS} | getChainConfig)"
+CHAIN_GEN_ARGS="-W 100 -H 100 -n 25 -C 0.5 -I 0.4"
 
 # Settings for config data and shared libraries
 REPO_BASE_DIR=${HOME}/Repo/active-microemulsion
 REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs" "sequenceFigureBuilder.sh" "utils" ) # Will be copied with "cp -r"
-DEST_DIR="${REPO_BASE_DIR}/SgeOut/RNADepletionRateTests/${OUT_DIR}"
+DEST_DIR="${REPO_BASE_DIR}/SgeOut/ScatterplotExperiment/${OUT_DIR}"
 
 # Creating the destination folder
 mkdir -p ${DEST_DIR}
 
 # --- Mandatory qsub arguments
 # Hardware requirements.
-#$ -l h_rss=256M,h_fsize=100M,h_cpu=24:00:00,hw=x86_64
+#$ -l h_rss=512M,h_fsize=100M,h_cpu=24:00:00,hw=x86_64
 
 # --- Optional qsub arguments
 # Change working directory - your job will be run from the directory
@@ -77,15 +86,24 @@ done
 # Entering scratch directory
 pushd ${scratch}
 # dont access /home after this line
+echo "Running on $(hostname)"
+echo "We are in $(pwd)"
 
 # if needed load modules here
 #module load <module_name>
+module load python3
 
-# if needed add export variables here
+# If needed, generate chains on-the-fly
+if [[ "${CHAIN_CONF_FILE}" == "" ]]; then
+    CHAIN_CONF_FILE="./generated.chains"
+    echo "Generating chains..."
+    ./utils/chainConfigurator.py ${CHAIN_GEN_ARGS} ${CHAIN_CONF_FILE}
+    CONFIG_FLAGS="${CONFIG_FLAGS} -P ${CHAIN_CONF_FILE}"
+    cp ${CHAIN_CONF_FILE} ${OUT_DIR}/.
+fi
 
 # Run the simulation
-echo "Running on $(hostname)"
-echo "We are in $(pwd)"
+echo "Running simulation..."
 ${scratch}/active-microemulsion ${CONFIG_FLAGS} -o ${OUT_DIR}
 
 # copy results to data
