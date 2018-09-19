@@ -160,7 +160,7 @@ int main(int argc, const char **argv)
     
     // Populate the extra snapshots' schedule
     EventSchedule<SnapshotEvent> extraSnapshotSchedule(cutoffTime);
-    if (extraSnapshotTimeOffset >= 0)
+    if (extraSnapshotTimeOffset >= 0 && extraSnapshotTimeOffset < endTime)
     {
         if (allExtraSnapshots)
         {

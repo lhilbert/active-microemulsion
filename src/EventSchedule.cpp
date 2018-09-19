@@ -2,7 +2,6 @@
 // Created by tommaso on 13/09/18.
 //
 
-#include <limits>
 #include "EventSchedule.h"
 
 template <typename EventType>

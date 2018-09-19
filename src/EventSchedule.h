@@ -7,6 +7,7 @@
 
 #include <map>
 #include <vector>
+#include <limits>
 
 typedef enum CutoffEvent
 {
@@ -35,7 +36,7 @@ private:
 
 public:
     explicit EventSchedule(double defaultEventTime) : defaultEventTime(defaultEventTime),
-                                                    nextEventTime(0)
+                                                    nextEventTime(std::numeric_limits<double>::max())
     {}
     
     void addEvent(double time, EventType eventType);
