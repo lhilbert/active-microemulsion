@@ -19,22 +19,32 @@ flagsToNameFilter()
     | sed s,"_P \([^ ]\+/\|\)\([^ ]\+\)\.[^ ]\+","_P\2",g \
     | sed s/"[.]\|^-"/""/g \
     | sed s,"_[a-zA-Z] [^ ]\+/[^ ]\+","",g \
-    | sed s/" "/""/g
+    | sed s/" "/""/g \
+    | sed s/"_\(flavopiridol\|actinomycin-D\|activate\)0_"/"_"/g
 }
-OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_sge_$$"
+
+timestamp="$(date +%Y%m%d_%H%M%S)"
+
+OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_sge_${timestamp}_$$"
 
 # Settings for config data and shared libraries
 REPO_BASE_DIR=${HOME}/Repo/active-microemulsion
 REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs" "sequenceFigureBuilder.sh" "utils" ) # Will be copied with "cp -r"
+DEST_DIR="${REPO_BASE_DIR}/SgeOut/RNADepletionRateTests/${OUT_DIR}"
+
+# Creating the destination folder
+mkdir -p ${DEST_DIR}
 
 # --- Mandatory qsub arguments
 # Hardware requirements.
-#$ -l h_rss=256M,h_fsize=100M,h_cpu=01:10:00,hw=x86_64
+#$ -l h_rss=256M,h_fsize=100M,h_cpu=24:00:00,hw=x86_64
 
 # --- Optional qsub arguments
 # Change working directory - your job will be run from the directory
 # that you call qsub in.  So stdout and stderr will end up there.
 #$ -cwd
+# #$ -o ${DEST_DIR}/
+# #$ -e ${DEST_DIR}/
 #
 # Split stdout and stderr to 2 files
 #$ -j n
@@ -80,7 +90,7 @@ ${scratch}/active-microemulsion ${CONFIG_FLAGS} -o ${OUT_DIR}
 
 # copy results to data
 #cp -r . /data/<my_dir>
-cp -r ${OUT_DIR} ${REPO_BASE_DIR}/.
+cp -r ${OUT_DIR}/* ${DEST_DIR}/.
 
 # Return to initial folder
 popd
@@ -92,3 +102,4 @@ unset scratch
 exit 0
 
 #EOF
+
