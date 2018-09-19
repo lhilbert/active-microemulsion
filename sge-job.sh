@@ -26,13 +26,13 @@ flagsToNameFilter()
 # Extract the chain config used, if any was passed
 getChainConfig()
 {
-    grep -o "-P [^ ]\+" \
+    grep -o "\-P [^ ]\+" \
     | sed s/"-P "/""/
 }
 # Extract the resolution config used
 getResolutionConfig()
 {
-    grep -o "-W [0-9]\+ -H [0-9]\+\|-H [0-9]\+ -W [0-9]\+"
+    grep -o "\-W [0-9]\+ \-H [0-9]\+\|\-H [0-9]\+ \-W [0-9]\+"
 }
 
 timestamp="$(date +%Y%m%d_%H%M%S)"
@@ -91,6 +91,7 @@ done
 
 # Entering scratch directory
 pushd ${scratch}
+mkdir -p ${OUT_DIR}
 # dont access /home after this line
 echo "Running on $(hostname)"
 echo "We are in $(pwd)"
