@@ -29,12 +29,18 @@ getChainConfig()
     grep -o "-P [^ ]\+" \
     | sed s/"-P "/""/
 }
+# Extract the resolution config used
+getResolutionConfig()
+{
+    grep -o "-W [0-9]\+ -H [0-9]\+\|-H [0-9]\+ -W [0-9]\+"
+}
 
 timestamp="$(date +%Y%m%d_%H%M%S)"
 
 OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_sge_${timestamp}_$$"
 CHAIN_CONF_FILE="$(echo ${CONFIG_FLAGS} | getChainConfig)"
-CHAIN_GEN_ARGS="-W 100 -H 100 -n 25 -C 0.5 -I 0.4"
+CHAIN_GEN_ARGS="-n 25 -C 0.5 -I 0.4"
+RESOLUTION="$(echo ${CONFIG_FLAGS} | getResolutionConfig)"
 
 # Settings for config data and shared libraries
 REPO_BASE_DIR=${HOME}/Repo/active-microemulsion
@@ -95,9 +101,12 @@ module load python3
 
 # If needed, generate chains on-the-fly
 if [[ "${CHAIN_CONF_FILE}" == "" ]]; then
+    if [[ "${RESOLUTION}" == "" ]]; then
+        RESOLUTION="-W 50 -H 50"
+    fi
     CHAIN_CONF_FILE="./generated.chains"
     echo "Generating chains..."
-    ./utils/chainConfigurator.py ${CHAIN_GEN_ARGS} ${CHAIN_CONF_FILE}
+    ./utils/chainConfigurator.py ${RESOLUTION} ${CHAIN_GEN_ARGS} ${CHAIN_CONF_FILE}
     CONFIG_FLAGS="${CONFIG_FLAGS} -P ${CHAIN_CONF_FILE}"
     cp ${CHAIN_CONF_FILE} ${OUT_DIR}/.
 fi
