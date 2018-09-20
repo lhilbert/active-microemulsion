@@ -30,6 +30,7 @@ int main(int argc, const char **argv)
     int numVisualizationOutputs = 100; //todo read this from config
     double snapshotInterval = -1;
     double extraSnapshotTimeOffset = -1;
+    double extraSnapshotTimeAbs = -1;
     double omega = 0.5; //todo read this from config
     double kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kMax;
     std::set<double> kSet;
@@ -73,8 +74,11 @@ int main(int argc, const char **argv)
              "Time interval (in seconds) between visualization snapshots. A negative time lets the '-S' flag take over")
             ("number-snapshots,S", opt::value<int>(&numVisualizationOutputs)->default_value(100),
              "Number of visualization snapshots to take. Only applied if '-t' is negative or not set")
-            ("extra-snapshot,e", opt::value<double>(&extraSnapshotTimeOffset)->default_value(1800),
-             "Time interval (in seconds) between cutoff events and their respective extra snapshot. A negative time disables the extra snapshot. The default value is 1800s = 30m")
+            ("extra-snapshot,e", opt::value<double>(&extraSnapshotTimeOffset)->default_value(-1),
+             "Time interval (in seconds) between cutoff events and their respective extra snapshot. "
+             "A negative time disables the extra snapshot.")
+            ("extra-snapshot-abs,E", opt::value<double>(&extraSnapshotTimeAbs)->default_value(-1),
+             "Time (in seconds) when the extra snapshot should be taken. A negative time disables this setting. This overrides -e.")
 //            ("all-extra-snapshots", "Enables the extra snapshot for all events (it is enabled only for last one by default)")
             ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
             ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
@@ -129,6 +133,7 @@ int main(int argc, const char **argv)
     endTime *= timeMultiplier;
     snapshotInterval *= timeMultiplier;
     extraSnapshotTimeOffset *= timeMultiplier;
+    extraSnapshotTimeAbs *= timeMultiplier;
     cutoffTime *= timeMultiplier;
     //
     int numInnerCells = rows * columns;
@@ -140,7 +145,7 @@ int main(int argc, const char **argv)
     kSet.insert(kRnaPlus);
     kSet.insert(kRnaMinus);
     kMax = *kSet.rbegin(); // Get the maximum on the set
-    double dtChem = (0.1 / kMax) * timeMultiplier;
+    double dtChem = 0.1 / kMax;
     if (snapshotInterval <= 0) // Auto-compute it only if it was not set
     {
         snapshotInterval =
@@ -172,7 +177,11 @@ int main(int argc, const char **argv)
     
     // Populate the extra snapshots' schedule
     EventSchedule<SnapshotEvent> extraSnapshotSchedule(cutoffTime);
-    if (extraSnapshotTimeOffset >= 0 && extraSnapshotTimeOffset <= endTime && cutoffSchedule.size() > 0)
+    if (extraSnapshotTimeAbs >= 0 && extraSnapshotTimeAbs <= endTime)
+    {
+        extraSnapshotSchedule.addEvent(extraSnapshotTimeAbs, GENERIC_SNAPSHOT);
+    }
+    else if (extraSnapshotTimeOffset >= 0 && extraSnapshotTimeOffset <= endTime && cutoffSchedule.size() > 0)
     {
         if (allExtraSnapshots)
         {
