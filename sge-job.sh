@@ -10,7 +10,6 @@
 # Active microemulsion command line parameters are passed from outside
 # Schedule this with:
 # qsub sge-job.sh <active-microemulsion_arguments>
-CONFIG_FLAGS="$@"
 
 # OutFolder naming filter from flags
 flagsToNameFilter()
@@ -45,7 +44,35 @@ RESOLUTION="$(echo ${CONFIG_FLAGS} | getResolutionConfig)"
 # Settings for config data and shared libraries
 REPO_BASE_DIR=${HOME}/Repo/active-microemulsion
 REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs" "sequenceFigureBuilder.sh" "utils" ) # Will be copied with "cp -r"
-DEST_DIR="${REPO_BASE_DIR}/SgeOut/ScatterplotExperiment/${OUT_DIR}"
+
+# Default sge folder
+SGE_FOLDER="DefaultOut"
+
+# Parse and extract special command line arguments not to be passed downstream -- Thanks https://stackoverflow.com/a/14203146 !!! :)
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    -O|--sge-folder-name)
+    SGE_FOLDER="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    *)    # unknown option
+    POSITIONAL+=("$1") # save it in an array for later
+    shift # past argument
+    ;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+CONFIG_FLAGS="$@"
+
+# Destination directory
+# todo: Make the script read an -o <dir> flag to
+DEST_DIR="${REPO_BASE_DIR}/SgeOut/${SGE_FOLDER}/${OUT_DIR}"
 
 # Creating the destination folder
 mkdir -p ${DEST_DIR}
