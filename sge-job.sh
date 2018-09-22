@@ -68,7 +68,7 @@ esac
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
-CONFIG_FLAGS="$@"
+CONFIG_FLAGS="${POSITIONAL[@]}"
 
 # Destination directory
 # todo: Make the script read an -o <dir> flag to
