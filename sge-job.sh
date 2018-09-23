@@ -11,6 +11,9 @@
 # Schedule this with:
 # qsub sge-job.sh <active-microemulsion_arguments>
 
+
+### Define some functions
+
 # OutFolder naming filter from flags
 flagsToNameFilter()
 {
@@ -34,16 +37,9 @@ getResolutionConfig()
     grep -o "\-W [0-9]\+ \-H [0-9]\+\|\-H [0-9]\+ \-W [0-9]\+"
 }
 
+### Start run
+
 timestamp="$(date +%Y%m%d_%H%M%S)"
-
-OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_sge_${timestamp}_$$"
-CHAIN_CONF_FILE="$(echo ${CONFIG_FLAGS} | getChainConfig)"
-CHAIN_GEN_ARGS="-n 25 -C 0.5 -I 0.4"
-RESOLUTION="$(echo ${CONFIG_FLAGS} | getResolutionConfig)"
-
-# Settings for config data and shared libraries
-REPO_BASE_DIR=${HOME}/Repo/active-microemulsion
-REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs" "sequenceFigureBuilder.sh" "utils" ) # Will be copied with "cp -r"
 
 # Default sge folder
 SGE_FOLDER="DefaultOut"
@@ -69,6 +65,16 @@ done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
 CONFIG_FLAGS="${POSITIONAL[@]}"
+#
+
+OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_sge_${timestamp}_$$"
+CHAIN_CONF_FILE="$(echo ${CONFIG_FLAGS} | getChainConfig)"
+CHAIN_GEN_ARGS="-n 25 -C 0.5 -I 0.4"
+RESOLUTION="$(echo ${CONFIG_FLAGS} | getResolutionConfig)"
+
+# Settings for config data and shared libraries
+REPO_BASE_DIR=${HOME}/Repo/active-microemulsion
+REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs" "sequenceFigureBuilder.sh" "utils" ) # Will be copied with "cp -r"
 
 # Destination directory
 # todo: Make the script read an -o <dir> flag to
