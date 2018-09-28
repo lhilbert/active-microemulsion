@@ -67,9 +67,9 @@ set -- "${POSITIONAL[@]}" # restore positional parameters
 CONFIG_FLAGS="${POSITIONAL[@]}"
 #
 
-OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_sge_${timestamp}_$$"
+OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_$$"
 CHAIN_CONF_FILE="$(echo ${CONFIG_FLAGS} | getChainConfig)"
-CHAIN_GEN_ARGS="-n 25 -C 0.5 -I 0.4"
+CHAIN_GEN_ARGS="-C 0.5 -I 0.4" # Number of chains is automatically set below according to grid size
 RESOLUTION="$(echo ${CONFIG_FLAGS} | getResolutionConfig)"
 
 # Settings for config data and shared libraries
@@ -85,7 +85,7 @@ mkdir -p ${DEST_DIR}
 
 # --- Mandatory qsub arguments
 # Hardware requirements.
-#$ -l h_rss=512M,h_fsize=100M,h_cpu=24:00:00,hw=x86_64
+#$ -l h_rss=512M,h_fsize=100M,h_cpu=36:00:00,hw=x86_64
 
 # --- Optional qsub arguments
 # Change working directory - your job will be run from the directory
@@ -126,8 +126,9 @@ done
 pushd ${scratch}
 mkdir -p ${OUT_DIR}
 # dont access /home after this line
-echo "Running on $(hostname)"
-echo "We are in $(pwd)"
+echo "Timestamp: ${timestamp}" | tee -a ${OUT_DIR}/metadata.txt
+echo "Hostname: $(hostname)" | tee -a ${OUT_DIR}/metadata.txt
+echo "CWD: $(pwd)" | tee -a ${OUT_DIR}/metadata.txt
 
 # if needed load modules here
 #module load <module_name>
@@ -138,16 +139,27 @@ if [[ "${CHAIN_CONF_FILE}" == "" ]]; then
     if [[ "${RESOLUTION}" == "" ]]; then
         RESOLUTION="-W 50 -H 50"
     fi
+    numchains="-n 25"
+    if [[ "${RESOLUTION}" == "-W 60 -H 60" ]]; then
+        numchains="-n 9"
+    fi
+    if [[ "${RESOLUTION}" == "-W 200 -H 200" ]]; then
+        numchains="-n 100"
+    fi
     CHAIN_CONF_FILE="./generated.chains"
     echo "Generating chains..."
-    ./utils/chainConfigurator.py ${RESOLUTION} ${CHAIN_GEN_ARGS} ${CHAIN_CONF_FILE}
+    CMD="./utils/chainConfigurator.py ${RESOLUTION} ${numchains} ${CHAIN_GEN_ARGS} ${CHAIN_CONF_FILE}"
+    echo ${CMD} | tee -a ${OUT_DIR}/metadata.txt
+    ${CMD}
     CONFIG_FLAGS="${CONFIG_FLAGS} -P ${CHAIN_CONF_FILE}"
     cp ${CHAIN_CONF_FILE} ${OUT_DIR}/.
 fi
 
 # Run the simulation
 echo "Running simulation..."
-${scratch}/active-microemulsion ${CONFIG_FLAGS} -o ${OUT_DIR}
+CMD="${scratch}/active-microemulsion ${CONFIG_FLAGS} -o ${OUT_DIR}"
+echo ${CMD} | tee -a ${OUT_DIR}/metadata.txt
+${CMD}
 
 # copy results to data
 #cp -r . /data/<my_dir>
