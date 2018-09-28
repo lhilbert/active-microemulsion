@@ -25,5 +25,6 @@ cmake-build-*
 
 # Ignore extra subdirectories
 LennartOldCode
+__pycache__
 
 #eof
