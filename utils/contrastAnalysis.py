@@ -151,7 +151,7 @@ if __name__ == "__main__":
     # Annotation
     maxMA = MA[argmaxMA]
     maxCovX = (analysis.skip + offsetMA + argmaxMA) * analysis.deltaT
-    plotter.ax.annotate('Maximum CoV @ x=%d' % (maxCovX),
+    plotter.ax.annotate('Maximum CoV @ t=%d' % (maxCovX),
                         xy=(maxCovX, maxMA + 0.03 * plotter.plotHeight),
                         xytext=(maxCovX - 10 * analysis.deltaT, maxMA + 0.2 * plotter.plotHeight),
                         arrowprops=dict(facecolor='red', shrink=1))
@@ -173,7 +173,7 @@ if __name__ == "__main__":
             nearestTimeToEvent = getEntryNearestToValue(analysis.getX(), eventTime)
             # nearestValueToCutoff = analysis.getCov()[analysis.getX().index(nearestTimeToCutoff)]
             nearestValueToEvent = MA[analysis.getX().index(nearestTimeToEvent) - offsetMA]
-            plotter.ax.annotate('%s @ x=%d' % (event.capitalize(), eventTime),
+            plotter.ax.annotate('%s @ t=%d' % (event.capitalize(), eventTime),
                                 xy=(eventTime, nearestValueToEvent - 0.03 * plotter.plotHeight),
                                 xytext=(
                                     eventTime - 10 * analysis.deltaT, nearestValueToEvent - 0.2 * plotter.plotHeight),
@@ -184,7 +184,7 @@ if __name__ == "__main__":
         nearestTimeToCutoff = getEntryNearestToValue(analysis.getX(), cutoffTime)
         # nearestValueToCutoff = analysis.getCov()[analysis.getX().index(nearestTimeToCutoff)]
         nearestValueToCutoff = MA[analysis.getX().index(nearestTimeToCutoff) - offsetMA]
-        plotter.ax.annotate('Cutoff @ x=%d' % (cutoffTime),
+        plotter.ax.annotate('Cutoff @ t=%d' % (cutoffTime),
                             xy=(cutoffTime, nearestValueToCutoff - 0.03 * plotter.plotHeight),
                             xytext=(cutoffTime - 10, nearestValueToCutoff - 0.2 * plotter.plotHeight),
                             arrowprops=dict(facecolor='green', shrink=1))

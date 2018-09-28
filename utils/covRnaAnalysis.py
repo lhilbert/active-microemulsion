@@ -16,14 +16,20 @@ args = parseArguments(scriptNickname)
 
 # Manage the inputDir vs. -X/-Y flags
 if (not args.xInputFiles) or (not args.yInputFiles):
-    if not args.inputDir:
-        print("ERROR: You either need to pass the inputDir or the -X & -Y flags!")
-        exit(1)
-    args.xInputFiles = [os.path.join(args.inputDir, "microemulsion_RNA_*")]
-    args.yInputFiles = [os.path.join(args.inputDir, "microemulsion_DNA_*")]
-
-# Extract the base directory, so that we can by default save plot and data there
-inputDirectory = os.path.dirname(args.xInputFiles[0])
+    if args.scatterPlot:
+        args.xInputFiles = [os.path.join(d, "microemulsion_RNA_EXTRA.pgm") for d in args.scatterPlot]
+        args.yInputFiles = [os.path.join(d, "microemulsion_DNA_EXTRA.pgm") for d in args.scatterPlot]
+        inputDirectory = "." # Scatterplot data goes in current dir
+    else:
+        if not args.inputDir:
+            print("ERROR: You either need to pass the inputDir or the -X & -Y flags!")
+            exit(1)
+        args.xInputFiles = [os.path.join(args.inputDir, "microemulsion_RNA_*")]
+        args.yInputFiles = [os.path.join(args.inputDir, "microemulsion_DNA_*")]
+        # Extract the base directory, so that we can by default save plot and data there
+        inputDirectory = os.path.dirname(args.xInputFiles[0])
+else:
+    inputDirectory = os.path.dirname(args.trxInputFiles[0])
 
 # Using input dir for plot if none was explicitly passed
 plotDirectory, plotFilename = os.path.split(args.plotFileName)
@@ -43,7 +49,10 @@ yFileSequence = FileSequence.expandSequence(args.yInputFiles)
 
 # Perform the actual analysis
 analysis = CurveAnalysis(xFileSequence, yFileSequence, yCovMode=True, blurRadius=args.blurRadius, quiet=args.scriptMode)
-analysis.setSkip(1)
+if args.scatterPlot:
+    analysis.setSkip(0)
+else:
+    analysis.setSkip(1)
 analysis.setDeltaT(args.deltaT)
 
 # Write analysis data to CSV
@@ -52,14 +61,16 @@ CsvWriter(analysis.resultsKeys, analysis.results).write(args.csvFileName)
 # Plotting
 plotter = Plotter(analysis.getXData(), plotFileName=args.plotFileName,
                   xlabel="RNA Intensity", ylabel="CoV(DNA)",
-                  interactive=(not args.scriptMode))
+                  interactive=(not args.scriptMode),
+                  scatterPlotMode=(not not args.scatterPlot),
+                  xlim=(0,200))
 
-if args.flavopiridol:
+if args.flavopiridol > 0:
     eventTime = args.flavopiridol
     eventIndex = analysis.getSnapshotNumber().index(getEntryNearestToValue(analysis.getSnapshotNumber(), eventTime))
     plotter.addYSeries(analysis.getYData()[:eventIndex+1])
     plotter.addYSeries(analysis.getYData()[eventIndex:], xOffset=eventIndex, dashes=[4, 1])
-elif args.actinomycinD:
+elif args.actinomycinD > 0:
     eventTime = args.actinomycinD
     eventIndex = analysis.getSnapshotNumber().index(getEntryNearestToValue(analysis.getSnapshotNumber(), eventTime))
     plotter.addYSeries(analysis.getYData()[:eventIndex+1])
@@ -77,7 +88,7 @@ for event in ["flavopiridol", "actinomycinD", "cutoff"]:
         print(">>> Debug: xText=%f, yText=%f" %(nearestXToEvent - 0.15 * np.max(analysis.getXData()),
                                                 nearestYToEvent + 0.1 * plotter.plotHeight))
         print(">>> Debug: plotter.plotHeight=%f" %(plotter.plotHeight))
-        plotter.ax.annotate('%s @ x=%d' % (event.capitalize(), eventTime),
+        plotter.ax.annotate('%s @ t=%d' % (event.capitalize(), eventTime),
                             xy=(nearestXToEvent, nearestYToEvent),
                             xytext=(
                                 nearestXToEvent - 0.12 * np.max(analysis.getXData()),

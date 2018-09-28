@@ -6,50 +6,52 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 from natsort import natsorted
+import functools
 
-class Plotter:
-    def __init__(self, X, plotFileName="plot.svg", interactive=True, xlabel="", ylabel=""):
-        self.X = X
-        self.plotFileName = plotFileName
-        self.interactive = interactive
-        self.xlabel = xlabel
-        self.ylabel = ylabel
-        self.Ys = []
-        self.offsets = {}
-        self.dashes = {}
-        self.plotHeight = 0
-        self.fig, self.ax = plt.subplots()
-        self.ax.spines['right'].set_visible(False)
-        self.ax.spines['top'].set_visible(False)
-        self.ax.xaxis.set_ticks_position('bottom')
-        self.ax.yaxis.set_ticks_position('left')
 
-    def addYSeries(self, Y, xOffset=0, dashes=[]):
-        self.Ys.append(Y)
-        self.plotHeight = np.max([np.max(y) for y in self.Ys]) - np.min([np.min(y) for y in self.Ys])
-        self.dashes[len(self.Ys) - 1] = dashes
-        if xOffset > 0:
-            self.offsets[len(self.Ys) - 1] = xOffset
-
-    def plot(self):
-        # Plotting all the series
-        for id, Y in enumerate(self.Ys):
-            if id in self.offsets.keys():
-                offset = self.offsets[id]
-                self.ax.plot(self.X[offset:offset+len(Y)], Y, dashes=self.dashes[id])
-            else:
-                self.ax.plot(self.X[:len(Y)], Y, dashes=self.dashes[id])
-
-        # Apply axis labels
-        plt.xlabel(self.xlabel)
-        plt.ylabel(self.ylabel)
-
-        if self.interactive:  # Here switch interactive mode off for matplotlib
-            plt.show()
-        else:
-            plt.ioff()
-
-        self.fig.savefig(self.plotFileName)
+### Functions
+def parseArguments(scriptNickname="script"):
+    # Manage command line arguments
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("inputDir", help="The input folder where to look for Trx and RNA "
+                                         "snapshots (overridden by -X and -Y)", nargs='?')
+    parser.add_argument("-X", "--x-input-files",
+                        help="The image file to perform measurements on, transcription channel",
+                        nargs='+', dest="xInputFiles")
+    parser.add_argument("-Y", "--y-input-files", help="The image file to perform measurements on, RNA channel",
+                        nargs='+', dest="yInputFiles")
+    parser.add_argument("-b", "--blur-radius", help="Radius of gaussian blur", dest="blurRadius", type=int, default=3)
+    parser.add_argument("-m", "--moving-average-window",
+                        help="Length of the moving average window. NOTE: It must be an ODD number",
+                        dest="movingAvgWindow", type=int, default=7)
+    parser.add_argument("-t", "--time-mapping", help="Time interval between snapshots", dest="deltaT", type=float,
+                        default=1)
+    parser.add_argument("-c", "--cutoff-time", help="Time point at which a generic cutoff took place", dest="cutoff",
+                        type=float,
+                        default=-1)
+    parser.add_argument("--flavopiridol", help="Time point at which Flavopiridol was applied", dest="flavopiridol",
+                        type=float,
+                        default=-1)
+    parser.add_argument("--actinomycin-D", help="Time point at which Actinomycin D was applied", dest="actinomycinD",
+                        type=float,
+                        default=-1)
+    parser.add_argument("--activate", help="Time point at which transcription is activated", dest="activate",
+                        type=float,
+                        default=-1)
+    parser.add_argument("-o", "--out-dir",
+                        help="Path to a specific folder where to put the plot and data files with default names.",
+                        dest="outDir", default=".")
+    parser.add_argument("-p", "--plot", help="Name of the desired output file for the generated plot",
+                        dest="plotFileName", default="%s_plot.svg" % (scriptNickname))
+    parser.add_argument("-d", "--csv", help="Name of the desired output csv for the data",
+                        dest="csvFileName", default="%s_results.csv" % (scriptNickname))
+    parser.add_argument("-s", "--script-mode", help="Run non-interactive. For embedding into scripts.",
+                        dest="scriptMode", action='store_true')
+    parser.add_argument("-S", "--scatter-plot", help="Run in scatter-plot mode, representing data from several "
+                                                     "simulations. Pass folders to scan as parameter for this option.",
+                        dest="scatterPlot", nargs='+')
+    args = parser.parse_args()
+    return args
 
 
 def computeCov(data):
@@ -59,6 +61,136 @@ def computeCov(data):
 
 def getEntryNearestToValue(givenList, value):
     return min(givenList, key=lambda x: abs(x - value))
+
+
+### Classes
+class Plotter:
+    def __init__(self, X, plotFileName="plot.svg", interactive=True, xlabel="", ylabel="", y2label="", xlim=None, ylim=None,
+                 scatterPlotMode=False):
+        self.X = X
+        self.plotFileName = plotFileName
+        self.interactive = interactive
+        self.xlabel = xlabel
+        self.ylabel = ylabel
+        self.y2label = y2label
+        self.xlim = xlim
+        self.ylim = ylim
+        self.scatterPlotMode = scatterPlotMode
+        self.Ys = []
+        self.offsets = {}
+        self.dashes = {}
+        self.fmt = {}
+        self.axes = {}
+        self.plotHeights = {}
+        self.plotHeight = 0
+        self.fig, self.ax = plt.subplots()
+        self.ax.spines['right'].set_visible(False)
+        self.ax.spines['top'].set_visible(False)
+        self.ax.xaxis.set_ticks_position('bottom')
+        self.ax.yaxis.set_ticks_position('left')
+        self.ax2 = None
+        self.plotFunctions = [None, None]
+
+    def setAxisLim(self, xlim="unchanged", ylim="unchanged"):
+        if xlim != "unchanged":
+            self.xlim = xlim
+        if ylim != "unchanged":
+            self.ylim = ylim
+
+    def addYSeries(self, Y, xOffset=0, dashes=None, fmt='', ax2=False):
+        curAx = self.ax
+        curAxId = 1
+        if ax2:
+            if not self.ax2:
+                self.ax2 = self.ax.twinx()
+                # self.ax2.spines['right'].set_visible(False)
+                # self.ax2.spines['top'].set_visible(False)
+                # self.ax2.xaxis.set_ticks_position('bottom')
+                self.ax2.yaxis.set_ticks_position('right')
+            curAx = self.ax2
+            curAxId = 2
+
+        self.Ys.append(Y)
+        self.plotHeights[curAxId] = np.max([np.max(y) for y in self.Ys]) - np.min([np.min(y) for y in self.Ys])
+        self.plotHeight = self.plotHeights[1]
+        id = len(self.Ys) - 1
+        if dashes:
+            self.dashes[id] = dashes
+        else:
+            self.dashes[id] = []
+        self.fmt[id] = fmt
+        self.axes[id] = curAx
+        if xOffset > 0:
+            self.offsets[id] = xOffset
+
+    def plot(self):
+        # Setting the axis limits, if necessary
+        self.setAxisLimits()
+        # Choosing the plotting function depending on the mode
+        self.configPlotFunctions()
+        # Plotting all the series
+        for id, Y in enumerate(self.Ys):
+            # Getting the ax to use
+            ax = self.axes[id]
+            plotFun = self.getPlotFunction(ax)
+            if id in self.offsets.keys():
+                offset = self.offsets[id]
+                if self.scatterPlotMode:
+                    plotFun(self.X[offset:offset + len(Y)], Y, dashes=self.dashes[id])
+                else:
+                    plotFun(self.X[offset:offset + len(Y)], Y, self.fmt[id], dashes=self.dashes[id])
+            else:
+                if self.scatterPlotMode:
+                    plotFun(self.X[:len(Y)], Y, dashes=self.dashes[id])
+                else:
+                    plotFun(self.X[:len(Y)], Y, self.fmt[id], dashes=self.dashes[id])
+
+        # Apply axis labels
+        self.ax.set_xlabel(self.xlabel)
+        self.ax.set_ylabel(self.ylabel)
+        if self.ax2 and self.y2label:
+            self.ax2.set_ylabel(self.y2label)
+
+        if self.interactive:  # Here switch interactive mode off for matplotlib
+            plt.show()
+        else:
+            plt.ioff()
+
+        self.fig.savefig(self.plotFileName)
+
+    def setAxisLimits(self):
+        # Setting the axis limits, if necessary
+        if self.xlim:
+            rx = self.xlim[0]
+            lx = self.xlim[1]
+            if rx:
+                self.ax.set_xlim(right=rx)
+            if lx:
+                self.ax.set_xlim(right=lx)
+        if self.ylim:
+            bx = self.ylim[0]
+            tx = self.ylim[1]
+            if bx:
+                self.ax.set_ylim(bottom=bx)
+            if tx:
+                self.ax.set_ylim(top=tx)
+
+    def configPlotFunctions(self):
+        # Choosing the plotting function depending on the mode
+        if self.scatterPlotMode:
+            self.plotFunctions[0] = functools.partial(self.ax.scatter, s=4)
+            if self.ax2:
+                self.plotFunctions[1] = functools.partial(self.ax2.scatter, s=4)
+        else:
+            self.plotFunctions[0] = self.ax.plot
+            if self.ax2:
+                self.plotFunctions[1] = self.ax2.plot
+
+    def getPlotFunction(self, ax):
+        if ax == self.ax2:
+            return self.plotFunctions[1]
+        else:
+            return self.plotFunctions[0]
 
 
 class FileSequence:
@@ -176,40 +308,73 @@ class CurveAnalysis:
     def getYData(self):
         return self.resultDict["Y"][self.skip:]
 
+class TimeAnalysis:
+    def __init__(self, yAxisFileSequence, blurRadius=3, quiet=False, yCovMode=False):
+        self.yAxisFileSequence = yAxisFileSequence
+        self.blurRadius = blurRadius
+        self.quiet = quiet
+        self.yCovMode = yCovMode
+        self.deltaT = 1
+        self.skip = 0
+        self.resultsKeys = ['SnapshotNumber', 'X', 'Y']
+        if self.yCovMode:
+            self.resultsKeys[2] = "CoV(Y)"
+        self.results = []  # List of [snapshotNumber, CoV, meanIntensity] elements
+        self.resultMatrix = None  # This will contain the numpy.ndarray of the results for easy slicing
+        self.resultDict = {"id": [], "X": [], "Y": []}
+        self.__analyzeSequence(self.yAxisFileSequence)
+        self.numSamples = len(self.results)
 
-def parseArguments(scriptNickname="script"):
-    # Manage command line arguments
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("inputDir", help="The input folder where to look for Trx and RNA "
-                                         "snapshots (overridden by -X and -Y)", nargs='?')
-    parser.add_argument("-X", "--x-input-files",
-                        help="The image file to perform measurements on, transcription channel",
-                        nargs='+', dest="xInputFiles")
-    parser.add_argument("-Y", "--y-input-files", help="The image file to perform measurements on, RNA channel",
-                        nargs='+', dest="yInputFiles")
-    parser.add_argument("-b", "--blur-radius", help="Radius of gaussian blur", dest="blurRadius", type=int, default=3)
-    parser.add_argument("-m", "--moving-average-window",
-                        help="Length of the moving average window. NOTE: It must be an ODD number",
-                        dest="movingAvgWindow", type=int, default=7)
-    parser.add_argument("-t", "--time-mapping", help="Time interval between snapshots", dest="deltaT", type=float,
-                        default=1)
-    parser.add_argument("-c", "--cutoff-time", help="Time point at which a generic cutoff took place", dest="cutoff",
-                        type=float,
-                        default=-1)
-    parser.add_argument("--flavopiridol", help="Time point at which Flavopiridol was applied", dest="flavopiridol",
-                        type=float,
-                        default=-1)
-    parser.add_argument("--actinomycin-D", help="Time point at which Actinomycin D was applied", dest="actinomycinD",
-                        type=float,
-                        default=-1)
-    parser.add_argument("--activate", help="Time point at which transcription is activated", dest="activate",
-                        type=float,
-                        default=-1)
-    parser.add_argument("-p", "--plot", help="Name of the desired output file for the generated plot",
-                        dest="plotFileName", default=("%s_plot.svg" % scriptNickname))
-    parser.add_argument("-d", "--csv", help="Name of the desired output csv for the data",
-                        dest="csvFileName", default=("%s_results.csv" % scriptNickname))
-    parser.add_argument("-s", "--script-mode", help="Run non-interactive. For embedding into scripts.",
-                        dest="scriptMode", action='store_true')
-    args = parser.parse_args()
-    return args
+    def __analyzeSnapshot(self, snapshotNum, ySnapshotFile):
+        yImg = cv2.imread(ySnapshotFile)
+        if type(yImg) == type(None):
+            print("WARNING: Image %s cannot be read. Ignoring it." % (ySnapshotFile))
+            return
+        blurredYImg = cv2.GaussianBlur(yImg, (self.blurRadius, self.blurRadius), 0)
+        yCov, yMean = computeCov(blurredYImg)
+        yValue = yMean
+        if self.yCovMode:
+            yValue = yCov
+        self.results.append([snapshotNum, snapshotNum, yValue])
+        if not self.quiet:
+            print("> %d : xData = %f, yData = %f" % (snapshotNum, snapshotNum, yValue))
+
+    def __analyzeSequence(self, yFileSequence):
+        for id, y in enumerate(yFileSequence):
+            self.__analyzeSnapshot(id, y)
+        self.resultMatrix = np.array(self.results)
+        self.resultDict["id"] = list(self.resultMatrix[:, 0])
+        self.resultDict["X"] = list(self.resultMatrix[:, 1])
+        self.resultDict["Y"] = list(self.resultMatrix[:, 2])
+
+    @staticmethod
+    def computeMovingAverage(sequence, windowSize):
+        return np.convolve(sequence, np.ones((windowSize,)) / windowSize, mode='valid')
+
+    def setSkip(self, skip=0):
+        """
+        Set the number of initial entries to skip when getting the results.
+        :param skip: Positive integer
+        :return: None
+        """
+        self.skip = skip
+
+    def setDeltaT(self, deltaT=1):
+        """
+        Set the time mapping corresponding to a single timestep.
+        :param deltaT: Positive integer
+        :return: None
+        """
+        self.deltaT = deltaT
+
+    def getNumSamples(self):
+        return self.numSamples
+
+    def getSnapshotNumber(self):
+        return [self.deltaT * x for x in self.resultDict["id"][self.skip:]]
+
+    def getXData(self):
+        return self.getSnapshotNumber()
+
+    def getYData(self, multiplier=1):
+        return multiplier * np.asarray(self.resultDict["Y"][self.skip:])
