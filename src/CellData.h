@@ -5,7 +5,7 @@
 #ifndef ACTIVE_MICROEMULSION_CELLDATA_H
 #define ACTIVE_MICROEMULSION_CELLDATA_H
 
-const unsigned char MAX_CROSSING_CHAINS = 4;
+const unsigned char MAX_CROSSING_CHAINS = 2;
 //todo: make sure to include some check to avoid swaps that cause this max to exceed
 
 typedef unsigned char ChemicalProperties;
@@ -23,8 +23,8 @@ typedef struct ChainProperties
 {
     // Note: chainId=0 CANNOT be used!
     ChainId chainId; //todo check how many chains we expect to have.
-    unsigned int position; // Position of cell within the chain
-    unsigned int chainLength; // chainLength==0 is the criterion for no chain
+    unsigned short position; // Position of cell within the chain
+    unsigned short chainLength; // chainLength==0 is the criterion for no chain
     ChainProperties() : chainId(0), position(0), chainLength(0) {};
 } ChainProperties;
 

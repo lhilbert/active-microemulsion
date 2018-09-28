@@ -86,6 +86,9 @@ private:
     inline double computeSwapProbability(double deltaEnergy)
     {
         return std::exp(deltaEmin - deltaEnergy);
+        // The below is here just as a reminder for possible future tests
+        // double prob = std::exp(-deltaEnergy);
+        // return fmin(prob, 1);
     }
     
     inline bool randomChoiceWithProbability(double probability)
