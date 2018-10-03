@@ -19,12 +19,13 @@ private:
     double omega, deltaEmin;
     std::mt19937_64 randomGenerator;
     std::uniform_real_distribution<double> uniformProbabilityDistribution;
-    double dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus;
+    double dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kRnaTransfer;
     bool isBoundarySticky;
 
 public:
     Microemulsion(Grid &grid, double omega, Logger &logger, double deltaTChem, double kOn, double kOff,
-                      double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus, bool isBoundarySticky);
+                      double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
+                      double kRnaTransfer, bool isBoundarySticky);
     
     void setDtChem(double dtChem);
     
@@ -120,9 +121,17 @@ private:
                                                       ChainProperties &chainProperties);
     
     // If reaction causes a change in chemical properties, return True.
-    bool performChemicalReaction(int column, int row);
+    bool performChemicalReactionsPhaseOne(int column, int row);
+    
+    bool performChemicalReactionsPhaseTwo(int column, int row);
     
     bool performActivitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
+    
+    bool performRnaAccumulationReaction(CellData &cellData, double reactionRatePlus);
+    
+    bool performRnaDecayReaction(CellData &cellData, double reactionRateMinus);
+    
+    RnaCounter performRnaTransferReaction(int column, int row, double transferRate);
     
     bool performTranscribabilitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
 };

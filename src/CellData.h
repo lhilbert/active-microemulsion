@@ -28,12 +28,15 @@ typedef struct ChainProperties
     ChainProperties() : chainId(0), position(0), chainLength(0) {};
 } ChainProperties;
 
+typedef unsigned short RnaCounter;
+
 typedef struct CellData
 {
     ChemicalProperties chemicalProperties;
     Flags flags;
+    RnaCounter rnaContent;
     ChainProperties chainProperties[MAX_CROSSING_CHAINS];
-    CellData() : chemicalProperties(0), flags(0) {};
+    CellData() : chemicalProperties(0), flags(0), rnaContent(0) {};
 } CellData;
 
 #endif //ACTIVE_MICROEMULSION_CELLDATA_H

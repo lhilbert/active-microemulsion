@@ -3,14 +3,16 @@
 //
 
 #include "PgmWriter.h"
+#include <cstring>
+#include <string>
 
 PgmWriter::PgmWriter(Logger &logger, int W, int H, std::string outputFile, std::string channelName,
-                     bool (*signalMatcher)(ChemicalProperties chemicalProperties))
+                     unsigned char (*signalConverter)(const CellData &cellData))
         : logger(logger),
-          width(W), height(H), depth(1),
+          width(W), height(H), depth(255),
           outputFileName(outputFile),
           channelName(channelName),
-          signalMatcher(signalMatcher),
+          signalConverter(signalConverter),
           pgm(nullptr), counter(0)
 {
     logger.logMsg(INFO, "Initializing PGM writer for channel %s", channelName.data());
@@ -97,28 +99,25 @@ void PgmWriter::__write(bool isExtraSnapshot)
     fprintf(pgm, "%d\n", depth);
     
     // Create buffer for one row of *.pgm picture, including spaces and trailing newline.
-    char *buffer = new char[2 * width + 1];
+    char *buffer = new char[4 * width + 1]; // The 4 multiplier is because we need to accommodate up to 255 values
     // Now write one row of data into the buffer, then write it to file
     for (int row = height; row > 0; row--)
     {
-        for (int column = 0; column <= 2 * width - 1; column += 2)
+        buffer[0] = '\0'; // Reset the buffer for each row
+        for (int column = 0; column < width; ++column)
         {
-            ChemicalProperties chemicalProperties = data[row][(column / 2) + 1].chemicalProperties;
-            char character = 48; // ASCII '0' char
-            if (signalMatcher(chemicalProperties))
-            {
-                character = 49; // ASCII '1' char
-            }
-            buffer[column] = character;
-            buffer[column + 1] = ' ';
+            const CellData cellData = data[row][column];
+            char intensity[8];
+            sprintf(intensity, "%d", signalConverter(cellData));
+            strcat(buffer, intensity);
+            strcat(buffer, " ");
         }
-        buffer[2 * width - 1] = '\n';
-        // terminating the buffer as a proper c-string
-        buffer[2 * width] = '\0';
+        // append newline (\0 termination is included in strcat)
+        strcat(buffer, "\n");
         
         fprintf(pgm, "%s", buffer);
     }
-    delete[] buffer;
     std::fclose(pgm);
+    delete[] buffer;
 }
 

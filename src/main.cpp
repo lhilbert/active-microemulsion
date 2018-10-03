@@ -32,7 +32,7 @@ int main(int argc, const char **argv)
     double extraSnapshotTimeOffset = -1;
     double extraSnapshotTimeAbs = -1;
     double omega = 0.5; //todo read this from config
-    double kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kMax;
+    double kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kRnaTransfer, kMax;
     std::set<double> kSet;
     
     std::vector<double> flavopiridolEvents;
@@ -97,7 +97,9 @@ int main(int argc, const char **argv)
             ("kRnaPlus", opt::value<double>(&kRnaPlus)->default_value(8.333333333e-3),
              "Reaction rate - RBP from free to bound state")
             ("kRnaMinus", opt::value<double>(&kRnaMinus)->default_value(8.333333333e-4),
-             "Reaction rate - RBP from bound to free state");
+             "Reaction rate - RBP from bound to free state")
+            ("kRnaTransfer", opt::value<double>(&kRnaTransfer)->default_value(1.666666666e-2),
+             "Reaction rate - RNA migrating from transcription site to an RBP site");
     opt::variables_map varsMap;
     opt::store(opt::parse_command_line(argc, argv, argsDescription), varsMap);
     opt::notify(varsMap);
@@ -144,8 +146,10 @@ int main(int argc, const char **argv)
     kSet.insert(kChromMinus);
     kSet.insert(kRnaPlus);
     kSet.insert(kRnaMinus);
+    kSet.insert(kRnaTransfer);
     kMax = *kSet.rbegin(); // Get the maximum on the set
     double dtChem = 0.1 / kMax;
+
     if (snapshotInterval <= 0) // Auto-compute it only if it was not set
     {
         snapshotInterval =
@@ -247,6 +251,7 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kChromMinus));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kRnaPlus));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kRnaMinus));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kRnaTransfer));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kMax));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numVisualizationOutputs));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(extraSnapshotTimeOffset));
@@ -292,22 +297,32 @@ int main(int argc, const char **argv)
     logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f, %s=%.3f", DUMP(numChromatinCells), DUMP(numRbpCells),
                   DUMP(chromatinRatio), DUMP(rbpRatio));
     logger.logMsg(PRODUCTION, "CHAINS: %s=%d, %s=%d", DUMP(allChains.size()), DUMP(cutoffChains.size()));
-    logger.logMsg(PRODUCTION, "Initializing microemulsion: %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f",
+    logger.logMsg(PRODUCTION, "Initializing microemulsion: %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f",
                   DUMP(dtChem), DUMP(kOn), DUMP(kOff), DUMP(kChromPlus), DUMP(kChromMinus), DUMP(kRnaPlus),
-                  DUMP(kRnaMinus));
+                  DUMP(kRnaMinus), DUMP(kRnaTransfer));
     Microemulsion microemulsion(grid, omega, logger,
-                                dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, stickyBoundary);
+                                dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kRnaTransfer,
+                                stickyBoundary);
     
     // Initialize PgmWriters for the 3 channels
     PgmWriter dnaWriter(logger, columns, rows, outputDir + "/microemulsion_DNA", "DNA",
-                        Grid::isChromatin);
+                        [](const CellData &cellData) -> unsigned char {
+                            return (unsigned char) 255 * Grid::isChromatin(cellData.chemicalProperties);
+                        });
     PgmWriter rnaWriter(logger, columns, rows, outputDir + "/microemulsion_RNA", "RNA",
-                        [](ChemicalProperties chemicalProperties) {
-                            return Grid::isActiveRBP(chemicalProperties)
-                                   || Grid::isActiveChromatin(chemicalProperties);
+                        [](const CellData &cellData) -> unsigned char {
+                            RnaCounter rnaContent = cellData.rnaContent;
+                            if (rnaContent > 255)
+                            {
+//                                logger.logMsg(WARNING, "PgmWriter: SATURATION - RNA value of %d exceeds 255", rnaContent);
+                                rnaContent = 255;
+                            }
+                            return (unsigned char) rnaContent;
                         });
     PgmWriter transcriptionWriter(logger, columns, rows, outputDir + "/microemulsion_Transcription", "Pol II Ser2Phos",
-                                  Grid::isActiveChromatin);
+                                  [](const CellData &cellData) -> unsigned char {
+                                      return (unsigned char) 255 * Grid::isActiveChromatin(cellData.chemicalProperties);
+                                  });
     dnaWriter.setData(grid.getData());
     rnaWriter.setData(grid.getData());
     transcriptionWriter.setData(grid.getData());

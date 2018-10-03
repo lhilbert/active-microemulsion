@@ -36,6 +36,7 @@ Grid::Grid(int columns, int rows, Logger &logger) : columns(columns),
                                                     logger(logger),
                                                     nextAvailableChainId(1)
 {
+    genericGenerator.seed(std::random_device()());
     rowGenerator.seed(std::random_device()());
     columnGenerator.seed(std::random_device()());
     rowOffsetGenerator.seed(std::random_device()());
@@ -693,6 +694,27 @@ bool Grid::doesAnyNeighbourMatchCondition(int column, int row, bool (*condition)
            || condition(getElement(column - 1, row + 1))
            || condition(getElement(column, row + 1))
            || condition(getElement(column + 1, row + 1));
+}
+
+std::vector<std::reference_wrapper<CellData>>
+Grid::getNeighboursMatchingConditions(int column, int row, bool (*condition)(CellData &))
+{
+    auto neighboursMatchingCondition = std::vector<std::reference_wrapper<CellData>>();
+    for (int colOffset = -1; colOffset <= 1; ++colOffset)
+    {
+        for (int rowOffset = -1; rowOffset <= 1; ++rowOffset)
+        {
+            if (!(colOffset == 0 && rowOffset == 0))
+            {
+                CellData &neighbour = getElement(column + colOffset, row + rowOffset);
+                if (condition(neighbour))
+                {
+                    neighboursMatchingCondition.push_back(neighbour);
+                }
+            }
+        }
+    }
+    return neighboursMatchingCondition;
 }
 
 bool Grid::isPositionNextToBoundary(int column, int row)

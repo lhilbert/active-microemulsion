@@ -24,7 +24,8 @@ public:
     const int columns, rows;
 private:
     CellData **data;
-    std::mt19937_64 rowGenerator, columnGenerator,
+    std::mt19937_64 genericGenerator,
+            rowGenerator, columnGenerator,
             rowOffsetGenerator, columnOffsetGenerator;
     std::uniform_int_distribution<int> rowDistribution, columnDistribution,
             rowOffsetDistribution, columnOffsetDistribution;
@@ -248,6 +249,11 @@ public:
         return isActive(getChemicalProperties(cellData));
     }
     
+    static inline bool isActiveChromatin(CellData &cellData)
+    {
+        return isActiveChromatin(getChemicalProperties(cellData));
+    }
+    
     static inline bool isActiveChromatin(ChemicalProperties chemicalProperties)
     {
         return isChromatin(chemicalProperties) && isActive(chemicalProperties);
@@ -263,6 +269,11 @@ public:
         return isInactiveChromatin(getElement(column, row).chemicalProperties);
     }
     
+    static inline bool isActiveRBP(CellData &cellData)
+    {
+        return isActiveRBP(getChemicalProperties(cellData));
+    }
+    
     static inline bool isActiveRBP(ChemicalProperties chemicalProperties)
     {
         return isRBP(chemicalProperties) && isActive(chemicalProperties);
@@ -271,6 +282,23 @@ public:
     static inline bool isInactiveRBP(ChemicalProperties chemicalProperties)
     {
         return isRBP(chemicalProperties) && !isActive(chemicalProperties);
+    }
+    
+    static inline RnaCounter getRnaContent(CellData &cellData)
+    {
+        return cellData.rnaContent;
+    }
+    
+    static inline void incrementRnaContent(CellData &cellData, RnaCounter amount=1)
+    {
+        //todo: Here include an anti-overflow check!
+        cellData.rnaContent += amount;
+    }
+    
+    static inline void decrementRnaContent(CellData &cellData, RnaCounter amount=1)
+    {
+        //todo: Here include an anti-underflow check!
+        cellData.rnaContent -= amount;
     }
     
     static inline Flags getFlags(CellData &cellData)
@@ -365,6 +393,9 @@ public:
     
     bool doesAnyNeighbourMatchCondition(int column, int row,
                                         bool (*condition)(CellData &));
+    
+    std::vector<std::reference_wrapper<CellData>>
+    getNeighboursMatchingConditions(int column, int row, bool (*condition)(CellData &));
     
     bool isPositionNextToBoundary(int column, int row);
 
