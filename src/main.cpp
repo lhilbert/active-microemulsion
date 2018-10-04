@@ -13,7 +13,7 @@ namespace opt = boost::program_options;
 
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
                        const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kChromPlus,
-                       double kChromMinus, double kRnaPlus, double kRnaMinus, double t);
+                       double kChromMinus, double kRnaPlus, double kRnaMinus, double kRnaTransfer, double t);
 
 void takeSnapshots(Logger &logger, PgmWriter &dnaWriter, PgmWriter &rnaWriter, PgmWriter &transcriptionWriter, double t,
                    unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed,
@@ -96,7 +96,7 @@ int main(int argc, const char **argv)
              "Reaction rate - Transcription turned OFF")
             ("kRnaPlus", opt::value<double>(&kRnaPlus)->default_value(8.333333333e-3),
              "Reaction rate - RBP from free to bound state")
-            ("kRnaMinus", opt::value<double>(&kRnaMinus)->default_value(8.333333333e-4),
+            ("kRnaMinusRbp", opt::value<double>(&kRnaMinus)->default_value(8.333333333e-4),
              "Reaction rate - RBP from bound to free state")
             ("kRnaTransfer", opt::value<double>(&kRnaTransfer)->default_value(1.666666666e-2),
              "Reaction rate - RNA migrating from transcription site to an RBP site");
@@ -312,7 +312,7 @@ int main(int argc, const char **argv)
     PgmWriter rnaWriter(logger, columns, rows, outputDir + "/microemulsion_RNA", "RNA",
                         [](const CellData &cellData) -> unsigned char {
                             RnaCounter rnaContent = cellData.rnaContent;
-                            if (rnaContent > 255)
+                            if (rnaContent > 255) // Saturate in a proper way
                             {
 //                                logger.logMsg(WARNING, "PgmWriter: SATURATION - RNA value of %d exceeds 255", rnaContent);
                                 rnaContent = 255;
@@ -349,7 +349,7 @@ int main(int argc, const char **argv)
         {
             applyCutoffEvents(logger, cutoffSchedule, microemulsion,
                               allChains, cutoffChains,
-                              kChromPlus, kChromMinus, kRnaPlus, kRnaMinus,
+                              kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kRnaTransfer,
                               t);
         }
         // Time-stepping loop
@@ -389,7 +389,7 @@ int main(int argc, const char **argv)
 
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
                        const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kChromPlus,
-                       double kChromMinus, double kRnaPlus, double kRnaMinus, double t)
+                       double kChromMinus, double kRnaPlus, double kRnaMinus, double kRnaTransfer, double t)
 {
     auto eventsToApply = eventSchedule.popEventsToApply(t);
     for (auto event : eventsToApply)
@@ -405,6 +405,8 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
             microemulsion.setKChromPlus(0);
             microemulsion.setKChromMinus(0);
             microemulsion.setKRnaPlus(0);
+            microemulsion.setKRnaMinusTxn(0); // RNA should not decay on TXN sites
+            microemulsion.setKRnaTransfer(0); // RNA should not be transferred from TXN sites to RBP
         }
         else if (event == ACTIVATE)
         {
@@ -412,13 +414,15 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
             microemulsion.setKChromPlus(kChromPlus);
             microemulsion.setKChromMinus(kChromMinus);
             microemulsion.setKRnaPlus(kRnaPlus);
-            microemulsion.setKRnaMinus(kRnaMinus);
+            microemulsion.setKRnaMinusRbp(kRnaMinus);
+            microemulsion.setKRnaMinusTxn(kRnaMinus);
+            microemulsion.setKRnaTransfer(kRnaTransfer);
         }
         else
         {
             // Testing playground here...
             logger.logEvent(PRODUCTION, t, "CUTOFF: Applying custom cutoff conditions");
-//            microemulsion.setKRnaMinus(0);
+//            microemulsion.setKRnaMinusRbp(0);
             microemulsion.setTranscriptionInhibitionOnChains(allChains, TRANSCRIPTION_POSSIBLE);
             microemulsion.setTranscriptionInhibitionOnChains(cutoffChains, TRANSCRIPTION_INHIBITED);
         }

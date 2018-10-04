@@ -19,7 +19,7 @@ private:
     double omega, deltaEmin;
     std::mt19937_64 randomGenerator;
     std::uniform_real_distribution<double> uniformProbabilityDistribution;
-    double dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kRnaTransfer;
+    double dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinusRbp, kRnaMinusTxn, kRnaTransfer;
     bool isBoundarySticky;
 
 public:
@@ -39,7 +39,11 @@ public:
     
     void setKRnaPlus(double kRnaPlus);
     
-    void setKRnaMinus(double kRnaMinus);
+    void setKRnaMinusRbp(double kRnaMinusRbp);
+
+    void setKRnaMinusTxn(double kRnaMinusTxn);
+    
+    void setKRnaTransfer(double kRnaTransfer);
     
     /**
      * Attempts a random swap between two neighbouring cells on the grid.

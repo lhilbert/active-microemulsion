@@ -17,7 +17,8 @@ Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double de
           kChromPlus(kChromPlus),
           kChromMinus(kChromMinus),
           kRnaPlus(kRnaPlus),
-          kRnaMinus(kRnaMinus),
+          kRnaMinusRbp(kRnaMinus),
+          kRnaMinusTxn(kRnaMinus),
           kRnaTransfer(kRnaTransfer),
           isBoundarySticky(isBoundarySticky)
 {
@@ -467,7 +468,7 @@ bool Microemulsion::performChemicalReactionsPhaseOne(int column, int row)
 //        }
 //        //
 //        isChemPropChanged = performActivitySwitchingReaction(cellData,
-//                                                             isInProximityOfTranscription * kRnaPlus, kRnaMinus);
+//                                                             isInProximityOfTranscription * kRnaPlus, kRnaMinusRbp);
 //    }
 //
 
@@ -483,7 +484,7 @@ bool Microemulsion::performChemicalReactionsPhaseTwo(int column, int row)
     if (Grid::isRBP(cellData) || Grid::isActiveChromatin(cellData))
     {
         isChemPropChanged = isChemPropChanged
-                || performRnaDecayReaction(cellData, kRnaMinus);
+                || performRnaDecayReaction(cellData, kRnaMinusRbp);
     }
     // 5) Now set as non-active RBP sites which have reached 0 RNA
     if (Grid::isActiveRBP(cellData) && Grid::getRnaContent(cellData) == 0)
@@ -631,10 +632,21 @@ void Microemulsion::setKRnaPlus(double kRnaPlus)
     Microemulsion::kRnaPlus = kRnaPlus;
 }
 
-void Microemulsion::setKRnaMinus(double kRnaMinus)
+void Microemulsion::setKRnaMinusRbp(double kRnaMinusRbp)
 {
-    logger.logMsg(PRODUCTION, "Microemulsion::setKRnaMinus %s=%f", DUMP(kRnaMinus));
-    Microemulsion::kRnaMinus = kRnaMinus;
+    logger.logMsg(PRODUCTION, "Microemulsion::setKRnaMinusRbp %s=%f", DUMP(kRnaMinusRbp));
+    Microemulsion::kRnaMinusRbp = kRnaMinusRbp;
+}
+
+void Microemulsion::setKRnaMinusTxn(double kRnaMinusTxn)
+{
+    logger.logMsg(PRODUCTION, "Microemulsion::setKRnaMinusTxn %s=%f", DUMP(kRnaMinusTxn));
+    Microemulsion::kRnaMinusTxn = kRnaMinusTxn;
+}
+
+void Microemulsion::setKRnaTransfer(double kRnaTransfer)
+{
+    Microemulsion::kRnaTransfer = kRnaTransfer;
 }
 
 void Microemulsion::setTranscriptionInhibitionOnChains(const std::set<ChainId> &targetChains,
