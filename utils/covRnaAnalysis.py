@@ -62,8 +62,8 @@ CsvWriter(analysis.resultsKeys, analysis.results).write(args.csvFileName)
 plotter = Plotter(analysis.getXData(), plotFileName=args.plotFileName,
                   xlabel="RNA Intensity", ylabel="CoV(DNA)",
                   interactive=(not args.scriptMode),
-                  scatterPlotMode=(not not args.scatterPlot),
-                  xlim=(0,200))
+                  scatterPlotMode=(not not args.scatterPlot))
+                  # xlim=(0,200))
 
 if args.flavopiridol > 0:
     eventTime = args.flavopiridol
