@@ -396,29 +396,29 @@ unsigned int Microemulsion::performChemicalReactions()
     logger.logMsg(INFO, "Performing chemical reactions");
     unsigned int chemicalChangesCounter = 0;
     // Phase 1:
+    // Decay "old" RNA
+    for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
+    {
+        for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
+        {
+            // Chemical reaction takes place on each cell of the grid.
+            chemicalChangesCounter += performChemicalReactionsDecay(column, row);
+        }
+    }
+    // Phase 2:
     // Switch chromatin activity, produce RNA, transfer RNA
     for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
     {
         for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
         {
             // Chemical reaction takes place on each cell of the grid.
-            chemicalChangesCounter += performChemicalReactionsPhaseOne(column, row);
-        }
-    }
-    // Phase 2:
-    // Decay RNA
-    for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
-    {
-        for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
-        {
-            // Chemical reaction takes place on each cell of the grid.
-            chemicalChangesCounter += performChemicalReactionsPhaseTwo(column, row);
+            chemicalChangesCounter += performChemicalReactionsProductionTransfer(column, row);
         }
     }
     return chemicalChangesCounter;
 }
 
-bool Microemulsion::performChemicalReactionsPhaseOne(int column, int row)
+bool Microemulsion::performChemicalReactionsProductionTransfer(int column, int row)
 {
     bool isChemPropChanged = false;
     CellData &cellData = grid.getElement(column, row);
@@ -462,7 +462,7 @@ bool Microemulsion::performChemicalReactionsPhaseOne(int column, int row)
 //        //debug
 //        if (isInProximityOfTranscription)
 //        {
-//            logger.logMsg(COARSE_DEBUG, "Microemulsion::performChemicalReactionsPhaseOne "
+//            logger.logMsg(COARSE_DEBUG, "Microemulsion::performChemicalReactionsProductionTransfer "
 //                                        "Cell %s=%d, %s=%d is in proximity of transcription",
 //                          DUMP(column), DUMP(row));
 //        }
@@ -475,7 +475,7 @@ bool Microemulsion::performChemicalReactionsPhaseOne(int column, int row)
     return isChemPropChanged;
 }
 
-bool Microemulsion::performChemicalReactionsPhaseTwo(int column, int row)
+bool Microemulsion::performChemicalReactionsDecay(int column, int row)
 {
     bool isChemPropChanged = false;
     CellData &cellData = grid.getElement(column, row);
@@ -558,7 +558,7 @@ RnaCounter Microemulsion::performRnaTransferReaction(int column, int row, double
         std::uniform_int_distribution<unsigned char> distribution(0, static_cast<unsigned char>(numNeighbours - 1));
         for (RnaCounter rnaUnit = 0; rnaUnit < rnaContent; ++rnaUnit)
         {
-            if (randomChoiceWithProbability(dtChem * transferRate))
+            if (randomChoiceWithProbability(dtChem * transferRate * numNeighbours)) // The more the neighbours, the more the chance of being transferred
             {
                 // Choose a random RBP-neighbour and transfer 1 RNA to it
                 CellData &randomNeighbour = rbpNeighbours[distribution(randomGenerator)];

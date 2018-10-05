@@ -125,9 +125,9 @@ private:
                                                       ChainProperties &chainProperties);
     
     // If reaction causes a change in chemical properties, return True.
-    bool performChemicalReactionsPhaseOne(int column, int row);
+    bool performChemicalReactionsProductionTransfer(int column, int row);
     
-    bool performChemicalReactionsPhaseTwo(int column, int row);
+    bool performChemicalReactionsDecay(int column, int row);
     
     bool performActivitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
     
