@@ -93,6 +93,7 @@ elif args.actinomycinD > 0:
 else:
     plotter.addYSeries(covAnalysis.getYData())
     plotter.addYSeries(rnaAnalysis.getYData(), fmt='g', ax2=True)
+    # plotter.addYSeries(np.add(10*rnaAnalysis.getYData(), txnAnalysis.getYData()), fmt='g', ax2=True)
     plotter.addYSeries(txnAnalysis.getYData(), fmt='m', ax2=True)
 
 for event in ["flavopiridol", "actinomycinD", "cutoff"]:

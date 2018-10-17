@@ -3,7 +3,7 @@
 UTILS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )" # Get the script's directory (from https://stackoverflow.com/a/246128)
 OUT_DIR="AnalysisOut"
 
-SCRIPTS=( "covRnaAnalysis.py" "trxRnaAnalysis.py" )
+SCRIPTS=( "covRnaAnalysis.py" "txnRnaAnalysis.py" )
 FILTERS=( "$(ls -1 . | grep -v "flavopiridol\|actinomycin\|\.csv$\|\.svg$\|AnalysisOut")" '*flavopiridol*' '*actinomycin-D*' )
 FILTER_NAMES=( 'control' 'flavopiridol' 'actinomycin-D' )
 
