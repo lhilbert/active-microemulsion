@@ -41,16 +41,30 @@ getResolutionConfig()
 
 timestamp="$(date +%Y%m%d_%H%M%S)"
 
-# Default sge folder
+# Default vars
 SGE_FOLDER="DefaultOut"
+CHAIN_GEN_I="0.4"
+CHAIN_GEN_n=""
+
+# Log input args
+echo Input args: $@
 
 # Parse and extract special command line arguments not to be passed downstream -- Thanks https://stackoverflow.com/a/14203146 !!! :)
 POSITIONAL=()
 while [[ $# -gt 0 ]]
 do
 key="$1"
-
 case $key in
+    --chain-generator-n)
+    CHAIN_GEN_n="$2"
+    shift
+    shift
+    ;;
+    --chain-generator-I)
+    CHAIN_GEN_I="$2"
+    shift
+    shift
+    ;;
     -O|--sge-folder-name)
     SGE_FOLDER="$2"
     shift # past argument
@@ -65,11 +79,13 @@ done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
 CONFIG_FLAGS="${POSITIONAL[@]}"
+echo Config flags: ${CONFIG_FLAGS} #debug
 #
 
 OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_$$"
 CHAIN_CONF_FILE="$(echo ${CONFIG_FLAGS} | getChainConfig)"
-CHAIN_GEN_ARGS="-C 0.5 -I 0.4" # Number of chains is automatically set below according to grid size
+CHAIN_GEN_ARGS="-C 0.5 -I ${CHAIN_GEN_I}" # Number of chains is automatically set below according to grid size
+#CHAIN_GEN_ARGS="-C 0.5 -I 0.2" # Number of chains is automatically set below according to grid size
 RESOLUTION="$(echo ${CONFIG_FLAGS} | getResolutionConfig)"
 
 # Settings for config data and shared libraries
@@ -85,7 +101,7 @@ mkdir -p ${DEST_DIR}
 
 # --- Mandatory qsub arguments
 # Hardware requirements.
-#$ -l h_rss=512M,h_fsize=100M,h_cpu=36:00:00,hw=x86_64
+# #$ -l h_rss=512M,h_fsize=100M,h_cpu=36:00:00,hw=x86_64
 
 # --- Optional qsub arguments
 # Change working directory - your job will be run from the directory
@@ -140,11 +156,17 @@ if [[ "${CHAIN_CONF_FILE}" == "" ]]; then
         RESOLUTION="-W 50 -H 50"
     fi
     numchains="-n 25"
-    if [[ "${RESOLUTION}" == "-W 60 -H 60" ]]; then
-        numchains="-n 9"
-    fi
-    if [[ "${RESOLUTION}" == "-W 200 -H 200" ]]; then
-        numchains="-n 100"
+    echo ChainGen_n: ${CHAIN_GEN_n} #debug
+    if [[ "${CHAIN_GEN_n}" ]]; then
+	echo Setting custom number of chains...
+	numchains="-n ${CHAIN_GEN_n}"
+    else
+        if [[ "${RESOLUTION}" == "-W 60 -H 60" ]]; then
+            numchains="-n 9"
+        fi
+        if [[ "${RESOLUTION}" == "-W 200 -H 200" ]]; then
+            numchains="-n 100"
+        fi
     fi
     CHAIN_CONF_FILE="./generated.chains"
     echo "Generating chains..."
