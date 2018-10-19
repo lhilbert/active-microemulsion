@@ -104,7 +104,7 @@ void PgmWriter::__write(bool isExtraSnapshot)
     for (int row = height; row > 0; row--)
     {
         buffer[0] = '\0'; // Reset the buffer for each row
-        for (int column = 0; column < width; ++column)
+        for (int column = 1; column <= width; ++column)
         {
             const CellData cellData = data[row][column];
             char intensity[8];
