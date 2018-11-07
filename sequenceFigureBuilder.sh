@@ -31,10 +31,14 @@ echo "Image size: ${WIDTH}x${HEIGHT}"
 #FIGURE_SEQ=( 0 11 22 33 56 78 100 ) # For cutoff @1/3
 #FIGURE_SEQ=( 0 1 25 100 ) # For simple phase separation simulations
 
-FIGURE_SEQ=( 0 10 22 52 )
+FIGURE_SEQ=( 1 10 20 30 40 50 60 70 80 )
+#FIGURE_SEQ=( 1 5 10 15 20 25 30 )
 
 BLUR_PARAMS="0x0.5" # This should be tuned carefully
 
+RNA_AMPLIFICATION_FACTOR=20 # If > 1, then RNA is amplified and original files are moved under an Orig folder temporarily and then restored!
+
+ORIGDIR="Orig"
 OUTDIR="${EXPERIMENT_DIR}/Figures"
 
 function execute { # Log and execute the input command
@@ -53,6 +57,18 @@ function expandParams { # Receiving a list of variable names to expand
 }
 
 mkdir -p ${OUTDIR}
+
+# RNA backup & amplification
+if [[ ${RNA_AMPLIFICATION_FACTOR} -gt 1 ]]; then
+	echo "Amplifying RNA channel by a factor of ${RNA_AMPLIFICATION_FACTOR}..."
+	pushd ${EXPERIMENT_DIR}
+	mkdir -p ${ORIGDIR}
+	cp microemulsion_RNA_* ${ORIGDIR}/ || (echo "FATAL: Cannot backup original RNA channel images!" && exit 1)
+	for f in microemulsion_RNA_*; do
+		execute "convert -evaluate Multiply ${RNA_AMPLIFICATION_FACTOR} -compress none ${ORIGDIR}/${f} ${f}"
+	done
+	popd
+fi
 
 for channel in ${CHANNELS[@]}; do
     echo "Building sequence for channel=${channel}"
@@ -74,5 +90,13 @@ for channel in ${CHANNELS[@]}; do
 #    cp ${out_dir}/Figure/${counter}_${item}*.png ${COMMON_OUTDIR}/
 done
 execute "montage ${OUTDIR}/*_labeled.png -geometry +0-20 -tile 1x3 -size 100x100 ${OUTDIR}/${EXPERIMENT_NAME}_${#CHANNELS[@]}Channels.png"
+
+# RNA images restore!
+if [[ ${RNA_AMPLIFICATION_FACTOR} -gt 1 ]]; then
+	echo "Restoring original RNA images..."
+	pushd ${EXPERIMENT_DIR}
+	cp ${ORIGDIR}/microemulsion_RNA_* ./ || (echo "FATAL: Cannot restore original RNA channel images! Be careful not to overwrite them!" && exit 1)
+	popd
+fi
 
 #eof
