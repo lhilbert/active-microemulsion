@@ -362,6 +362,13 @@ class FileSequence:
         return natsorted(sequence)
 
     @staticmethod
+    def removeItemContainingSubstring(sequence, substring):
+        targets = [ x for x in sequence if len(x.split(substring))>1 ]
+        for tgt in targets:
+            sequence.remove(tgt)
+        return sequence
+
+    @staticmethod
     def expand(pattern):
         return FileSequence.natsort(glob.glob(pattern))
 
@@ -373,7 +380,7 @@ class FileSequence:
                 fileSequence.extend(FileSequence.expand(f))
             else:
                 fileSequence.append(f)
-        return FileSequence.natsort(fileSequence)
+        return FileSequence.removeItemContainingSubstring(FileSequence.natsort(fileSequence), "EXTRA")
 
 
 class CsvWriter:
