@@ -7,8 +7,8 @@
 
 #include <iostream>
 #include <cstdio>
-#include "CellData.h"
-#include "Logger.h"
+#include "../Cell/CellData.h"
+#include "../Logger/Logger.h"
 
 class PgmWriter
 {

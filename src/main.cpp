@@ -1,11 +1,12 @@
 #include <iostream>
-#include "Logger.h"
-#include "Grid.h"
-#include "Microemulsion.h"
-#include "PgmWriter.h"
-#include "ChainConfig.h"
-#include "EventSchedule.h"
-#include "EventSchedule.cpp" // Since template implementation is here
+#include "Logger/Logger.h"
+#include "Grid/Grid.h"
+#include "Microemulsion/Microemulsion.h"
+#include "Visualization/PgmWriter.h"
+#include "Chain/ChainConfig.h"
+#include "EventSchedule/EventSchedule.h"
+#include "EventSchedule/EventSchedule.cpp" // Since template implementation is here
+#include "Grid/GridInitializer.h"
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
@@ -155,7 +156,7 @@ int main(int argc, const char **argv)
     kSet.insert(kRnaTransfer);
     kMax = *kSet.rbegin(); // Get the maximum on the set
     double dtChem = 0.1 / kMax;
-
+    
     if (snapshotInterval <= 0) // Auto-compute it only if it was not set
     {
         snapshotInterval =
@@ -286,7 +287,7 @@ int main(int argc, const char **argv)
     logger.logMsg(PRODUCTION, "Reading polymeric chains configuration");
     std::set<ChainId> allChains, cutoffChains;
     Grid grid(columns, rows, logger);
-    grid.initializeInnerGridAs(Grid::chemicalPropertiesOf(RBP, NOT_ACTIVE));
+    GridInitializer::initializeInnerGridAs(grid, Grid::chemicalPropertiesOf(RBP, NOT_ACTIVE));
     // ...and read chains configuration
     ChainConfig chainConfig(logger);
     std::ifstream chainConfigFile(inputChainsFile);
@@ -298,8 +299,9 @@ int main(int argc, const char **argv)
                                                                            static_cast<Activity>(chainConfig.isActive()));
         Flags flags = Grid::flagsOf(static_cast<Transcribability>(chainConfig.isTranscribable()),
                                     static_cast<TranscriptionInhibition>(!chainConfig.isInhibited()));
-        auto newChain = grid.initializeGridWithStepInstructions(allChains, column, row, chainConfig.getSteps(),
-                                                                chemicalProperties, flags);
+        auto newChain = GridInitializer::initializeGridWithStepInstructions(grid, allChains, column, row,
+                                                                            chainConfig.getSteps(),
+                                                                            chemicalProperties, flags);
         
         auto pos = chainProperties.find("Cutoff");
         if (pos != chainProperties.end() && pos->second != 0)

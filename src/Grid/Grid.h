@@ -8,9 +8,10 @@
 #include <random>
 #include <functional>
 #include <set>
-#include "CellData.h"
-#include "Logger.h"
-#include "ChainConfig.h"
+#include "../Cell/CellData.h"
+#include "../Logger/Logger.h"
+
+class GridInitializer;
 
 /*
  * The Grid class represents a discretized domain with a regular grid.
@@ -19,6 +20,8 @@
  */
 class Grid
 {
+    friend GridInitializer;
+    
 public:
     // Columns and rows are the values of the inner number of rows and columns, without the external halo.
     const int columns, rows;
@@ -66,124 +69,6 @@ public:
     CellData &getElement(int column, int row) const;
     
     void setElement(int column, int row, CellData &value);
-    
-    int initializeInnerGridAs(ChemicalProperties chemicalProperties, Flags flags = 0);
-    
-    int initializeGridRandomly(double randomRatio, ChemicalProperties chemicalProperties, Flags flags = 0);
-    
-    /**
-     * Add a single horizontal chain of the specified characteristics to the grid.
-     * @param offsetFromCenter
-     * @param chemicalProperties
-     * @param flags
-     * @param enforceChainIntegrity
-     * @return A set containing the ID assigned to the new chain.
-     */
-    std::set<ChainId>
-    initializeGridWithSingleChain(int offsetFromCenter, ChemicalProperties chemicalProperties, Flags flags = 0,
-                                  bool enforceChainIntegrity = true);
-    
-    /**
-     * Add a single horizontal chain of the specified characteristics to the grid.
-     * Extend a given chain id set with the id of the new chain.
-     * @param chainSet
-     * @param offsetFromCenter
-     * @param chemicalProperties
-     * @param flags
-     * @param enforceChainIntegrity
-     * @return A set containing the ID assigned to the new chain.
-     */
-    std::set<ChainId>
-    initializeGridWithSingleChain(std::set<ChainId> &chainSet,
-                                  int offsetFromCenter, ChemicalProperties chemicalProperties, Flags flags = 0,
-                                  bool enforceChainIntegrity = true);
-    
-    /**
-     * Add a two horizontal chains of the specified characteristics, and with given distance, to the grid.
-     * @param distance
-     * @param chemicalProperties
-     * @param flags
-     * @param enforceChainIntegrity
-     * @return A set containing the IDs assigned to the new chains.
-     */
-    std::set<ChainId> initializeGridWithTwoParallelChains(int distance, ChemicalProperties chemicalProperties,
-                                                          Flags flags = 0, bool enforceChainIntegrity = true);
-    
-    /**
-     * Add a two horizontal chains of the specified characteristics, and with given distance, to the grid.
-     * Extend a given chain id set with the id of the new chain.
-     * @param chainSet
-     * @param distance
-     * @param chemicalProperties
-     * @param flags
-     * @param enforceChainIntegrity
-     * @return A set containing the IDs assigned to the new chains.
-     */
-    std::set<ChainId> initializeGridWithTwoParallelChains(std::set<ChainId> &chainSet,
-                                                          int distance, ChemicalProperties chemicalProperties,
-                                                          Flags flags = 0, bool enforceChainIntegrity = true);
-    
-    /**
-     * Add a horizontal and a vertical chains of the specified characteristics, crossing at the given point, to the grid.
-     * @param xOffset
-     * @param yOffset
-     * @param chemicalProperties
-     * @param flags
-     * @param enforceChainIntegrity
-     * @return A set containing the IDs assigned to the new chains.
-     */
-    std::set<ChainId> initializeGridWithTwoOrthogonalChains(int xOffset, int yOffset,
-                                                            ChemicalProperties chemicalProperties, Flags flags = 0,
-                                                            bool enforceChainIntegrity = true);
-    
-    /**
-     * Add a horizontal and a vertical chains of the specified characteristics, crossing at the given point, to the grid.
-     * Extend a given chain id set with the id of the new chain.
-     * @param chainSet
-     * @param xOffset
-     * @param yOffset
-     * @param chemicalProperties
-     * @param flags
-     * @param enforceChainIntegrity
-     * @return A set containing the IDs assigned to the new chains.
-     */
-    std::set<ChainId> initializeGridWithTwoOrthogonalChains(std::set<ChainId> &chainSet,
-                                                            int xOffset, int yOffset,
-                                                            ChemicalProperties chemicalProperties, Flags flags = 0,
-                                                            bool enforceChainIntegrity = true);
-    
-    std::set<ChainId> initializeGridWithPiShapedTwoSegmentsChain(ChemicalProperties chemicalProperties, Flags flags = 0,
-                                                                 bool enforceChainIntegrity = true);
-    
-    std::set<ChainId> initializeGridWithPiShapedTwoSegmentsChain(std::set<ChainId> &chainSet,
-                                                                 ChemicalProperties chemicalProperties, Flags flags = 0,
-                                                                 bool enforceChainIntegrity = true);
-    
-//    std::set<ChainId>
-//    initializeGridWith3WaySegmentedChain(int offsetFromCenter, int startColumn, int endColumn,
-//                                         ChemicalProperties chemicalPropertiesA,
-//                                         ChemicalProperties chemicalPropertiesB,
-//                                         Flags flags = 0,
-//                                         bool enforceChainIntegrity = true);
-//
-//    std::set<ChainId> initializeGridWith3WaySegmentedChain(std::set<ChainId> &chainSet,
-//                                                           int offsetFromCenter,
-//                                                           ChemicalProperties chemicalPropertiesA,
-//                                                           ChemicalProperties chemicalPropertiesB,
-//                                                           Flags flags = 0,
-//                                                           bool enforceChainIntegrity = true);
-    
-    std::set<ChainId>
-    initializeGridWithStepInstructions(int &column, int &row, std::vector<Displacement> steps,
-                                       ChemicalProperties chemicalProperties,
-                                       Flags flags = 0,
-                                       bool enforceChainIntegrity = true);
-    
-    std::set<ChainId> initializeGridWithStepInstructions(std::set<ChainId> &chainSet,
-                                                         int &column, int &row, std::vector<Displacement> steps,
-                                                         ChemicalProperties chemicalProperties,
-                                                         Flags flags = 0,
-                                                         bool enforceChainIntegrity = true);
     
     void pickRandomElement(int &i, int &j);
     

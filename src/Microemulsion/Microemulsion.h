@@ -5,8 +5,8 @@
 #ifndef ACTIVE_MICROEMULSION_MICROEMULSION_H
 #define ACTIVE_MICROEMULSION_MICROEMULSION_H
 
-#include "Grid.h"
-#include "Logger.h"
+#include "../Grid/Grid.h"
+#include "../Logger/Logger.h"
 #include <cmath>
 #include <functional>
 #include <random>

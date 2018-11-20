@@ -4,13 +4,14 @@ CFLAGS = -std=c++14 -O2 -Wall -pedantic -Werror -fopenmp
 LIBS = -lboost_program_options -lboost_system -lboost_filesystem -lm
 
 OBJ = src/main.o \
-      src/Timing.o \
-      src/Logger.o \
-      src/Grid.o \
-      src/ChainConfig.o \
-      src/PgmWriter.o \
-      src/Microemulsion.o \
-      src/EventSchedule.o
+      src/Timing/Timing.o \
+      src/Logger/Logger.o \
+      src/Grid/Grid.o \
+      src/Grid/GridInitializer.o \
+      src/Chain/ChainConfig.o \
+      src/Visualization/PgmWriter.o \
+      src/Microemulsion/Microemulsion.o \
+      src/EventSchedule/EventSchedule.o
 
 all:  $(OBJ)
 	$(CC) $(CFLAGS) -o active-microemulsion $(OBJ) $(LIBS)
@@ -21,10 +22,11 @@ all:  $(OBJ)
 clean:
 	rm $(OBJ)
 
-src/Grid.o              : src/Grid.h src/CellData.h src/ChainConfig.h
-src/Logger.o            : src/Logger.h src/Timing.h
-src/Microemulsion.o     : src/Microemulsion.h src/Grid.h src/Logger.h
-src/PgmWriter.o         : src/PgmWriter.h src/CellData.h
-src/Timing.o            : src/Timing.h
+src/Grid/Grid.o                     : src/Grid/Grid.h src/Cell/CellData.h src/Chain/ChainConfig.h
+src/Grid/GridInitializer.o          : src/Grid/Grid.h src/Cell/CellData.h src/Chain/ChainConfig.h
+src/Logger/Logger.o                 : src/Logger/Logger.h src/Timing/Timing.h
+src/Microemulsion/Microemulsion.o   : src/Microemulsion/Microemulsion.h src/Grid/Grid.h src/Logger/Logger.h
+src/Visualization/PgmWriter.o       : src/Visualization/PgmWriter.h src/Cell/CellData.h
+src/Timing/Timing.o                 : src/Timing/Timing.h
 
-src/main.o              : src/Logger.h src/Grid.h src/Microemulsion.h src/PgmWriter.h src/ChainConfig.h src/EventSchedule.h
+src/main.o  : src/Logger/Logger.h src/Grid/Grid.h src/Grid/GridInitializer.h src/Microemulsion/Microemulsion.h src/Visualization/PgmWriter.h src/Chain/ChainConfig.h src/EventSchedule/EventSchedule.h
