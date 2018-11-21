@@ -17,7 +17,7 @@ private:
     Grid &grid;
     Logger &logger;
     double omega, deltaEmin;
-    std::mt19937_64 randomGenerator;
+    std::mt19937 randomGenerator;
     std::uniform_real_distribution<double> uniformProbabilityDistribution;
     double dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinusRbp, kRnaMinusTxn, kRnaTransfer;
     bool isBoundarySticky;

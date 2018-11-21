@@ -8,6 +8,7 @@
 #include <random>
 #include <functional>
 #include <set>
+#include <omp.h>
 #include "../Cell/CellData.h"
 #include "../Logger/Logger.h"
 
@@ -25,11 +26,10 @@ class Grid
 public:
     // Columns and rows are the values of the inner number of rows and columns, without the external halo.
     const int columns, rows;
+    std::mt19937 randomNumberGenerator;
+    
 private:
     CellData **data;
-    std::mt19937_64 genericGenerator,
-            rowGenerator, columnGenerator,
-            rowOffsetGenerator, columnOffsetGenerator;
     std::uniform_int_distribution<int> rowDistribution, columnDistribution,
             rowOffsetDistribution, columnOffsetDistribution;
     Logger &logger;

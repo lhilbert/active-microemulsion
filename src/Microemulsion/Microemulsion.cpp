@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include "Microemulsion.h"
+#include "../Utils/RandomGenerator.h"
 
 Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double deltaTChem, double kOn, double kOff,
                              double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
@@ -22,7 +23,7 @@ Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double de
           isBoundarySticky(isBoundarySticky)
 {
     deltaEmin = -10 * fabs(omega);
-    randomGenerator.seed(std::random_device()());
+    randomGenerator = RandomGenerator::getInstance().getGenerator();
 }
 
 bool Microemulsion::performRandomSwap()

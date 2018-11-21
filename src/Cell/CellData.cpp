@@ -6,20 +6,20 @@
 
 void CellData::setChemicalSpecies(ChemicalSpecies species)
 {
-    Utils::setBit(chemicalProperties, SPECIES_BIT, species);
+    BitwiseOperations::setBit(chemicalProperties, SPECIES_BIT, species);
 }
 void CellData::setChemicalSpecies(ChemicalProperties &chemicalProperties, ChemicalSpecies species)
 {
-    Utils::setBit(chemicalProperties, SPECIES_BIT, species);
+    BitwiseOperations::setBit(chemicalProperties, SPECIES_BIT, species);
 }
 
 void CellData::setActivity(Activity activity)
 {
-    Utils::setBit(chemicalProperties, ACTIVE_BIT, activity);
+    BitwiseOperations::setBit(chemicalProperties, ACTIVE_BIT, activity);
 }
 void CellData::setActivity(ChemicalProperties &chemicalProperties, Activity activity)
 {
-    Utils::setBit(chemicalProperties, ACTIVE_BIT, activity);
+    BitwiseOperations::setBit(chemicalProperties, ACTIVE_BIT, activity);
 }
 
 void CellData::setChemicalProperties(ChemicalSpecies species, Activity activity)
@@ -54,22 +54,22 @@ void CellData::setFlags(Flags &flags, Transcribability transcribability, Transcr
 
 void CellData::setTranscribability(Transcribability transcribability)
 {
-    Utils::setBit(flags, TRANSCRIBABLE_BIT, transcribability);
+    BitwiseOperations::setBit(flags, TRANSCRIBABLE_BIT, transcribability);
 }
 
 void CellData::setTranscriptionInhibition(TranscriptionInhibition inhibition)
 {
-    Utils::setBit(flags, TRANSCRIPTION_INHIBITION_BIT, inhibition);
+    BitwiseOperations::setBit(flags, TRANSCRIPTION_INHIBITION_BIT, inhibition);
 }
 
 void CellData::setTranscribability(Flags &flags, Transcribability transcribability)
 {
-    Utils::setBit(flags, TRANSCRIBABLE_BIT, transcribability);
+    BitwiseOperations::setBit(flags, TRANSCRIBABLE_BIT, transcribability);
 }
 
 void CellData::setTranscriptionInhibition(Flags &flags, TranscriptionInhibition inhibition)
 {
-    Utils::setBit(flags, TRANSCRIPTION_INHIBITION_BIT, inhibition);
+    BitwiseOperations::setBit(flags, TRANSCRIPTION_INHIBITION_BIT, inhibition);
 }
 
 Flags CellData::flagsOf(Transcribability transcribability, TranscriptionInhibition inhibition)

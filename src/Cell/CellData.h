@@ -8,7 +8,7 @@
 #include <functional>
 #include <set>
 #include <cassert>
-#include "../Utils/Utils.h"
+#include "../Utils/BitwiseOperations.h"
 
 const unsigned char MAX_CROSSING_CHAINS = 2;
 //todo: make sure to include some check to avoid swaps that cause this max to exceed
@@ -157,7 +157,7 @@ public:
     {
         //todo: Here include an anti-overflow check!
         rnaContent += amount;
-        assert(rnaContent > 0);
+        assert(rnaContent >= 0);
     }
     
     void setActivity(Activity activity);
@@ -166,7 +166,7 @@ public:
     {
         //todo: Here include an anti-underflow check!
         rnaContent -= amount;
-        assert(rnaContent > 0);
+        assert(rnaContent >= 0);
     }
     
     void setChemicalProperties(ChemicalSpecies species, Activity activity);

@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <functional>
 #include "Grid.h"
+#include "../Utils/RandomGenerator.h"
 
 // NOTE: nice alloc and dealloc come from https://stackoverflow.com/a/1403157
 void Grid::allocateGrid()
@@ -36,11 +37,7 @@ Grid::Grid(int columns, int rows, Logger &logger) : columns(columns),
                                                     logger(logger),
                                                     nextAvailableChainId(1)
 {
-    genericGenerator.seed(std::random_device()());
-    rowGenerator.seed(std::random_device()());
-    columnGenerator.seed(std::random_device()());
-    rowOffsetGenerator.seed(std::random_device()());
-    columnOffsetGenerator.seed(std::random_device()());
+    randomNumberGenerator = RandomGenerator::getInstance().getGenerator();
     allocateGrid();
 }
 
@@ -56,12 +53,12 @@ const CellData **Grid::getData()
 
 inline int Grid::pickRow()
 {
-    return rowDistribution(rowGenerator);
+    return rowDistribution(randomNumberGenerator);
 }
 
 inline int Grid::pickColumn()
 {
-    return columnDistribution(columnGenerator);
+    return columnDistribution(randomNumberGenerator);
 }
 
 void Grid::pickRandomElement(int &i, int &j)
@@ -72,12 +69,12 @@ void Grid::pickRandomElement(int &i, int &j)
 
 inline int Grid::pickRowOffset()
 {
-    return rowOffsetDistribution(rowOffsetGenerator);
+    return rowOffsetDistribution(randomNumberGenerator);
 }
 
 inline int Grid::pickColumnOffset()
 {
-    return columnOffsetDistribution(columnOffsetGenerator);
+    return columnOffsetDistribution(randomNumberGenerator);
 }
 
 void Grid::pickRandomNeighbourOf(int i, int j, int &neighbourI, int &neighbourJ)
@@ -122,8 +119,8 @@ void Grid::setChemicalProperties(int column, int row, ChemicalSpecies species, A
 
 void Grid::setChemicalProperties(int column, int row, ChemicalProperties chemicalProperties)
 {
-    setChemicalProperties(column, row, static_cast<ChemicalSpecies>(Utils::getBit(chemicalProperties, SPECIES_BIT)),
-                          static_cast<Activity>(Utils::getBit(chemicalProperties, ACTIVE_BIT)));
+    setChemicalProperties(column, row, static_cast<ChemicalSpecies>(BitwiseOperations::getBit(chemicalProperties, SPECIES_BIT)),
+                          static_cast<Activity>(BitwiseOperations::getBit(chemicalProperties, ACTIVE_BIT)));
 }
 
 void Grid::setFlags(int column, int row, Flags flags)
@@ -316,3 +313,4 @@ bool Grid::isCellWithinInternalDomain(int column, int row)
            && row >= getFirstRow()
            && row <= getLastRow();
 }
+
