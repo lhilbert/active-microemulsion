@@ -93,44 +93,6 @@ void Grid::pickRandomNeighbourOf(int i, int j, int &neighbourI, int &neighbourJ)
             );
 }
 
-//std::set<ChainId> Grid::initializeGridWith3WaySegmentedChain(int offsetFromCenter, int startColumn, int endColumn,
-//                                                             ChemicalProperties chemicalPropertiesA,
-//                                                             ChemicalProperties chemicalPropertiesB,
-//                                                             Flags flags,
-//                                                             bool enforceChainIntegrity)
-//{
-////    logger.logMsg(PRODUCTION, "Initializing grid with horizontal 3way-segmented chain");
-//    std::set<ChainId> newChains;
-////
-////    int chainRow = (rows / 2) + offsetFromCenter;
-////    ChainId chainId1 = 0;
-////    ChainId chainId2 = 0;
-////    ChainId chainId3 = 0;
-////    if (enforceChainIntegrity)
-////    {
-////        chainId1 = getNewChainId();
-////        newChains.insert(chainId1);
-////        chainId2 = getNewChainId();
-////        newChains.insert(chainId2);
-////        chainId3 = getNewChainId();
-////        newChains.insert(chainId3);
-////    }
-////
-////    int le
-////    for (int column = 1; column <= columns; ++column)
-////    {
-////        setChemicalProperties(column, chainRow, chemicalProperties);
-////        setFlags(column, chainRow, flags);
-////        if (enforceChainIntegrity)
-////        {
-////            setChainProperties(column, chainRow, chainId1,
-////                               static_cast<unsigned int>(column - 1),
-////                               (unsigned int) rows);
-////        }
-////    }
-//    return newChains;
-//}
-
 void Grid::initializeCellProperties(int column, int row, ChemicalProperties chemicalProperties, Flags flags,
                                     bool enforceChainIntegrity, ChainId chainId, unsigned int chainLength,
                                     unsigned int position)
@@ -143,54 +105,25 @@ void Grid::initializeCellProperties(int column, int row, ChemicalProperties chem
     }
 }
 
-void Grid::setChemicalSpecies(ChemicalProperties &target, ChemicalSpecies species)
-{
-    setBit(target, SPECIES_BIT, species);
-}
-
 void Grid::setChemicalSpecies(int column, int row, ChemicalSpecies species)
 {
-    setChemicalSpecies(getElement(column, row).chemicalProperties, species);
-}
-
-void Grid::setActivity(ChemicalProperties &target, Activity activity)
-{
-    setBit(target, ACTIVE_BIT, activity);
+    getElement(column, row).setChemicalSpecies(species);
 }
 
 void Grid::setActivity(int column, int row, Activity activity)
 {
-    setActivity(getElement(column, row).chemicalProperties, activity);
-}
-
-void Grid::setChemicalProperties(ChemicalProperties &target, ChemicalSpecies species, Activity activity)
-{
-    setChemicalSpecies(target, species);
-    setActivity(target, activity);
+    getElement(column, row).setActivity(activity);
 }
 
 void Grid::setChemicalProperties(int column, int row, ChemicalSpecies species, Activity activity)
 {
-    setChemicalProperties(getElement(column, row).chemicalProperties, species, activity);
+    getElement(column, row).setChemicalProperties(species, activity);
 }
 
 void Grid::setChemicalProperties(int column, int row, ChemicalProperties chemicalProperties)
 {
-    setChemicalProperties(column, row, static_cast<ChemicalSpecies>(getBit(chemicalProperties, SPECIES_BIT)),
-                          static_cast<Activity>(getBit(chemicalProperties, ACTIVE_BIT)));
-}
-
-ChemicalProperties Grid::chemicalPropertiesOf(ChemicalSpecies species, Activity activity)
-{
-    ChemicalProperties chemicalProperties = 0;
-    setChemicalProperties(chemicalProperties, species, activity);
-    return chemicalProperties;
-}
-
-void Grid::setFlags(Flags &target, Transcribability transcribability, TranscriptionInhibition inhibition)
-{
-    setTranscribability(target, transcribability);
-    setTranscriptionInhibition(target, inhibition);
+    setChemicalProperties(column, row, static_cast<ChemicalSpecies>(Utils::getBit(chemicalProperties, SPECIES_BIT)),
+                          static_cast<Activity>(Utils::getBit(chemicalProperties, ACTIVE_BIT)));
 }
 
 void Grid::setFlags(int column, int row, Flags flags)
@@ -198,24 +131,14 @@ void Grid::setFlags(int column, int row, Flags flags)
     getElement(column, row).flags = flags;
 }
 
-void Grid::setTranscribability(Flags &target, Transcribability transcribability)
-{
-    setBit(target, TRANSCRIBABLE_BIT, transcribability);
-}
-
 void Grid::setTranscribability(int column, int row, Transcribability transcribability)
 {
-    setTranscribability(getElement(column, row).flags, transcribability);
-}
-
-void Grid::setTranscriptionInhibition(Flags &target, TranscriptionInhibition inhibition)
-{
-    setBit(target, TRANSCRIPTION_INHIBITION_BIT, inhibition);
+    getElement(column, row).setTranscribability(transcribability);
 }
 
 void Grid::setTranscriptionInhibition(int column, int row, TranscriptionInhibition inhibition)
 {
-    setTranscriptionInhibition(getElement(column, row).flags, inhibition);
+    getElement(column, row).setTranscriptionInhibition(inhibition);
 }
 
 CellData &Grid::getElement(int column, int row)
@@ -231,13 +154,6 @@ CellData &Grid::getElement(int column, int row) const
 void Grid::setElement(int column, int row, CellData &value)
 {
     data[row][column] = value;
-}
-
-Flags Grid::flagsOf(Transcribability transcribability, TranscriptionInhibition inhibition)
-{
-    Flags flags = 0;
-    setFlags(flags, transcribability, inhibition);
-    return flags;
 }
 
 size_t Grid::setChainProperties(int column, int row, ChainId chainId, unsigned int position, unsigned int length)
@@ -327,21 +243,6 @@ std::vector<std::reference_wrapper<ChainProperties>> Grid::chainsCellBelongsTo(i
         }
     }
     return chains;
-}
-
-std::set<ChainId> Grid::chainsCellBelongsTo(CellData &cellData)
-{
-    auto chainIdSet = std::set<ChainId>();
-    for (unsigned char k = 0; k < MAX_CROSSING_CHAINS; ++k)
-    {
-        ChainProperties &chainProperties = cellData.chainProperties[k];
-        unsigned int chainLength = chainProperties.chainLength;
-        if (chainLength > 0)
-        {
-            chainIdSet.insert(chainProperties.chainId);
-        }
-    }
-    return chainIdSet;
 }
 
 ChainId Grid::getNewChainId()

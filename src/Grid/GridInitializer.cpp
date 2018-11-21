@@ -6,7 +6,7 @@
 #include <functional>
 #include "GridInitializer.h"
 
-int GridInitializer::initializeInnerGridAs(Grid grid, ChemicalProperties chemicalProperties, Flags flags)
+int GridInitializer::initializeInnerGridAs(Grid &grid, ChemicalProperties chemicalProperties, Flags flags)
 {
     for (int j = grid.getFirstRow(); j <= grid.getLastRow(); ++j)
     {
@@ -19,7 +19,7 @@ int GridInitializer::initializeInnerGridAs(Grid grid, ChemicalProperties chemica
     return grid.columns * grid.rows;
 }
 
-int GridInitializer::initializeGridRandomly(Grid grid, double randomRatio, ChemicalProperties chemicalProperties,
+int GridInitializer::initializeGridRandomly(Grid &grid, double randomRatio, ChemicalProperties chemicalProperties,
                                             Flags flags)
 {
     grid.logger.logMsg(PRODUCTION, "Initializing grid randomly: %s=%f", DUMP(randomRatio));
@@ -43,7 +43,7 @@ int GridInitializer::initializeGridRandomly(Grid grid, double randomRatio, Chemi
     return c;
 }
 
-std::set<ChainId> GridInitializer::initializeGridWithSingleChain(Grid grid,
+std::set<ChainId> GridInitializer::initializeGridWithSingleChain(Grid &grid,
                                                                  int offsetFromCenter,
                                                                  ChemicalProperties chemicalProperties,
                                                                  Flags flags,
@@ -75,7 +75,7 @@ std::set<ChainId> GridInitializer::initializeGridWithSingleChain(Grid grid,
 }
 
 std::set<ChainId>
-GridInitializer::initializeGridWithTwoParallelChains(Grid grid,
+GridInitializer::initializeGridWithTwoParallelChains(Grid &grid,
                                                      int distance, ChemicalProperties chemicalProperties,
                                                      Flags flags,
                                                      bool enforceChainIntegrity)
@@ -113,7 +113,7 @@ GridInitializer::initializeGridWithTwoParallelChains(Grid grid,
     return newChains;
 }
 
-std::set<ChainId> GridInitializer::initializeGridWithTwoOrthogonalChains(Grid grid,
+std::set<ChainId> GridInitializer::initializeGridWithTwoOrthogonalChains(Grid &grid,
                                                                          int xOffset, int yOffset,
                                                                          ChemicalProperties chemicalProperties,
                                                                          Flags flags, bool enforceChainIntegrity)
@@ -162,7 +162,7 @@ std::set<ChainId> GridInitializer::initializeGridWithTwoOrthogonalChains(Grid gr
 }
 
 std::set<ChainId>
-GridInitializer::initializeGridWithPiShapedTwoSegmentsChain(Grid grid,
+GridInitializer::initializeGridWithPiShapedTwoSegmentsChain(Grid &grid,
                                                             ChemicalProperties chemicalProperties, Flags flags,
                                                             bool enforceChainIntegrity)
 {
@@ -242,7 +242,7 @@ GridInitializer::initializeGridWithPiShapedTwoSegmentsChain(Grid grid,
 }
 
 std::set<ChainId>
-GridInitializer::initializeGridWithStepInstructions(Grid grid,
+GridInitializer::initializeGridWithStepInstructions(Grid &grid,
                                                     int &column, int &row, std::vector<Displacement> steps,
                                                     ChemicalProperties chemicalProperties, Flags flags,
                                                     bool enforceChainIntegrity)
@@ -289,7 +289,7 @@ GridInitializer::initializeGridWithStepInstructions(Grid grid,
     return newChains;
 }
 
-std::set<ChainId> GridInitializer::initializeGridWithSingleChain(Grid grid,
+std::set<ChainId> GridInitializer::initializeGridWithSingleChain(Grid &grid,
                                                                  std::set<ChainId> &chainSet, int offsetFromCenter,
                                                                  ChemicalProperties chemicalProperties, Flags flags,
                                                                  bool enforceChainIntegrity)
@@ -300,7 +300,7 @@ std::set<ChainId> GridInitializer::initializeGridWithSingleChain(Grid grid,
     return tmpSet;
 }
 
-std::set<ChainId> GridInitializer::initializeGridWithTwoParallelChains(Grid grid,
+std::set<ChainId> GridInitializer::initializeGridWithTwoParallelChains(Grid &grid,
                                                                        std::set<ChainId> &chainSet, int distance,
                                                                        ChemicalProperties chemicalProperties,
                                                                        Flags flags,
@@ -313,7 +313,7 @@ std::set<ChainId> GridInitializer::initializeGridWithTwoParallelChains(Grid grid
 }
 
 std::set<ChainId>
-GridInitializer::initializeGridWithTwoOrthogonalChains(Grid grid,
+GridInitializer::initializeGridWithTwoOrthogonalChains(Grid &grid,
                                                        std::set<ChainId> &chainSet, int xOffset, int yOffset,
                                                        ChemicalProperties chemicalProperties, Flags flags,
                                                        bool enforceChainIntegrity)
@@ -325,7 +325,7 @@ GridInitializer::initializeGridWithTwoOrthogonalChains(Grid grid,
 }
 
 std::set<ChainId>
-GridInitializer::initializeGridWithPiShapedTwoSegmentsChain(Grid grid,
+GridInitializer::initializeGridWithPiShapedTwoSegmentsChain(Grid &grid,
                                                             std::set<ChainId> &chainSet,
                                                             ChemicalProperties chemicalProperties,
                                                             Flags flags, bool enforceChainIntegrity)
@@ -337,7 +337,7 @@ GridInitializer::initializeGridWithPiShapedTwoSegmentsChain(Grid grid,
 }
 
 std::set<ChainId>
-GridInitializer::initializeGridWithStepInstructions(Grid grid,
+GridInitializer::initializeGridWithStepInstructions(Grid &grid,
                                                     std::set<ChainId> &chainSet, int &column, int &row,
                                                     std::vector<Displacement> steps,
                                                     ChemicalProperties chemicalProperties, Flags flags,

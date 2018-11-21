@@ -7,6 +7,7 @@
 #include "EventSchedule/EventSchedule.h"
 #include "EventSchedule/EventSchedule.cpp" // Since template implementation is here
 #include "Grid/GridInitializer.h"
+#include "Cell/CellData.h"
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
@@ -287,7 +288,7 @@ int main(int argc, const char **argv)
     logger.logMsg(PRODUCTION, "Reading polymeric chains configuration");
     std::set<ChainId> allChains, cutoffChains;
     Grid grid(columns, rows, logger);
-    GridInitializer::initializeInnerGridAs(grid, Grid::chemicalPropertiesOf(RBP, NOT_ACTIVE));
+    GridInitializer::initializeInnerGridAs(grid, CellData::chemicalPropertiesOf(RBP, NOT_ACTIVE));
     // ...and read chains configuration
     ChainConfig chainConfig(logger);
     std::ifstream chainConfigFile(inputChainsFile);
@@ -295,10 +296,10 @@ int main(int argc, const char **argv)
     {
         const std::map<std::string, unsigned char> &chainProperties = chainConfig.getChainProperties();
         int column = chainConfig.getStartCol(), row = chainConfig.getStartRow();
-        ChemicalProperties chemicalProperties = Grid::chemicalPropertiesOf(CHROMATIN,
-                                                                           static_cast<Activity>(chainConfig.isActive()));
-        Flags flags = Grid::flagsOf(static_cast<Transcribability>(chainConfig.isTranscribable()),
-                                    static_cast<TranscriptionInhibition>(!chainConfig.isInhibited()));
+        ChemicalProperties chemicalProperties = CellData::chemicalPropertiesOf(CHROMATIN,
+                                                                               static_cast<Activity>(chainConfig.isActive()));
+        Flags flags = CellData::flagsOf(static_cast<Transcribability>(chainConfig.isTranscribable()),
+                                        static_cast<TranscriptionInhibition>(!chainConfig.isInhibited()));
         auto newChain = GridInitializer::initializeGridWithStepInstructions(grid, allChains, column, row,
                                                                             chainConfig.getSteps(),
                                                                             chemicalProperties, flags);
@@ -327,7 +328,7 @@ int main(int argc, const char **argv)
     // Initialize PgmWriters for the 3 channels
     PgmWriter dnaWriter(logger, columns, rows, outputDir + "/microemulsion_DNA", "DNA",
                         [](const CellData &cellData) -> unsigned char {
-                            return (unsigned char) 255 * Grid::isChromatin(cellData.chemicalProperties);
+                            return (unsigned char) 255 * CellData::isChromatin(cellData.chemicalProperties);
                         });
     PgmWriter rnaWriter(logger, columns, rows, outputDir + "/microemulsion_RNA", "RNA",
                         [](const CellData &cellData) -> unsigned char {
@@ -341,7 +342,7 @@ int main(int argc, const char **argv)
                         });
     PgmWriter transcriptionWriter(logger, columns, rows, outputDir + "/microemulsion_Transcription", "Pol II Ser2Phos",
                                   [](const CellData &cellData) -> unsigned char {
-                                      return (unsigned char) 255 * Grid::isActiveChromatin(cellData.chemicalProperties);
+                                      return (unsigned char) 255 * CellData::isActiveChromatin(cellData.chemicalProperties);
                                   });
     dnaWriter.setData(grid.getData());
     rnaWriter.setData(grid.getData());

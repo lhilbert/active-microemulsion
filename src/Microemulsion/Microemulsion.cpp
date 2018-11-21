@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include "Microemulsion.h"
-//#include <omp.h>
 
 Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double deltaTChem, double kOn, double kOff,
                              double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
@@ -90,21 +89,21 @@ bool Microemulsion::doesPairRequireEnergyCost(int x, int y, int nx, int ny) cons
     CellData &cellData = grid.getElement(x, y);
     CellData &nCellData = grid.getElement(nx, ny);
     // Here logic for pairs that require an omega energy cost
-    if (Grid::isChromatin(cellData))
+    if (cellData.isChromatin())
     {
-        if (Grid::isActive(cellData) || Grid::getRnaContent(cellData) > 0)
+        if (cellData.isActive() || cellData.getRnaContent() > 0)
         {
-            isEnergyCostRequired = Grid::isChromatin(nCellData);
+            isEnergyCostRequired = nCellData.isChromatin();
         }
         else
         {
-            isEnergyCostRequired = Grid::isActive(nCellData) || Grid::getRnaContent(nCellData) > 0;
+            isEnergyCostRequired = nCellData.isActive() || nCellData.getRnaContent() > 0;
         }
     }
-    else if (Grid::isActiveRBP(cellData))
+    else if (cellData.isActiveRBP())
     {
-        isEnergyCostRequired = Grid::isChromatin(cellData)
-                && !(Grid::isActive(nCellData) || Grid::getRnaContent(nCellData) > 0);
+        isEnergyCostRequired = cellData.isChromatin()
+                && !(nCellData.isActive() || nCellData.getRnaContent() > 0);
     }
     return isEnergyCostRequired;
 }
@@ -423,55 +422,32 @@ bool Microemulsion::performChemicalReactionsProductionTransfer(int column, int r
     bool isChemPropChanged = false;
     CellData &cellData = grid.getElement(column, row);
     // 1) Switch chromatin activity level
-    if (Grid::isChromatin(cellData))
+    if (cellData.isChromatin())
     {
         // Reaction for Chromatin
-        bool isTranscribable = Grid::isTranscribable(cellData);
+        bool isTranscribable = cellData.isTranscribable();
         isChemPropChanged = performActivitySwitchingReaction(cellData,
                                                              isTranscribable * kChromPlus, kChromMinus);
         
         //todo: Check if the transcribability reaction is ok here or should be performed in a different place
-        bool isTranscriptionAllowed = !Grid::isTranscriptionInhibited(cellData);
+        bool isTranscriptionAllowed = !cellData.isTranscriptionInhibited();
         performTranscribabilitySwitchingReaction(cellData, isTranscriptionAllowed * kOn, kOff);
     }
     // 2) Now produce and accumulate RNA on active chromatin sites
-    if (Grid::isActiveChromatin(cellData))
+    if (cellData.isActiveChromatin())
     {
         isChemPropChanged = isChemPropChanged
                             || performRnaAccumulationReaction(cellData, kRnaPlus);
         
     }
     // 3) Now distribute RNA to RBP sites
-    if (Grid::isChromatin(cellData) && Grid::getRnaContent(cellData) > 0)
+    if (cellData.isChromatin() && cellData.getRnaContent() > 0)
     {
         //todo: What happens to the contained RNA if the chromatin is switched to inactive?
         //todo(2): Short answer: we just keep transferring it until it eventually disappears (we could alternatively also force it out)
         performRnaTransferReaction(column, row, kRnaTransfer);
     }
-//    // Here below the old code to be removed
-//
-//    else if (Grid::isRBP(cellData))
-//    {
-//        // Reaction for RBP
-//        bool isInProximityOfTranscription =
-//                grid.doesAnyNeighbourMatchCondition(column, row,
-//                                                    [](CellData &cell) {
-//                                                        return Grid::isChromatin(cell) && Grid::isActive(cell);
-//                                                    }
-//                );
-//        //debug
-//        if (isInProximityOfTranscription)
-//        {
-//            logger.logMsg(COARSE_DEBUG, "Microemulsion::performChemicalReactionsProductionTransfer "
-//                                        "Cell %s=%d, %s=%d is in proximity of transcription",
-//                          DUMP(column), DUMP(row));
-//        }
-//        //
-//        isChemPropChanged = performActivitySwitchingReaction(cellData,
-//                                                             isInProximityOfTranscription * kRnaPlus, kRnaMinusRbp);
-//    }
-//
-
+    
     return isChemPropChanged;
 }
 
@@ -481,15 +457,15 @@ bool Microemulsion::performChemicalReactionsDecay(int column, int row)
     CellData &cellData = grid.getElement(column, row);
     
     // 4) Now let RNA decay from active chromatin and RBP sites
-    if (Grid::isRBP(cellData) || Grid::isActiveChromatin(cellData))
+    if (cellData.isRBP() || cellData.isActiveChromatin())
     {
         isChemPropChanged = isChemPropChanged
                 || performRnaDecayReaction(cellData, kRnaMinusRbp);
     }
     // 5) Now set as non-active RBP sites which have reached 0 RNA
-    if (Grid::isActiveRBP(cellData) && Grid::getRnaContent(cellData) == 0)
+    if (cellData.isActiveRBP() && cellData.getRnaContent() == 0)
     {
-        Grid::setActivity(cellData.chemicalProperties, NOT_ACTIVE);
+        cellData.setActivity(NOT_ACTIVE);
     }
     return isChemPropChanged;
 }
@@ -498,11 +474,11 @@ bool
 Microemulsion::performActivitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus)
 {
     bool isSwitched = false;
-    if (Grid::isActive(cellData))
+    if (cellData.isActive())
     {
         if (randomChoiceWithProbability(dtChem * reactionRateMinus))
         {
-            Grid::setActivity(cellData.chemicalProperties, NOT_ACTIVE);
+            cellData.setActivity(NOT_ACTIVE);
             isSwitched = true;
         }
     }
@@ -510,7 +486,7 @@ Microemulsion::performActivitySwitchingReaction(CellData &cellData, double react
     {
         if (randomChoiceWithProbability(dtChem * reactionRatePlus))
         {
-            Grid::setActivity(cellData.chemicalProperties, ACTIVE);
+            cellData.setActivity(ACTIVE);
             isSwitched = true;
         }
     }
@@ -523,7 +499,7 @@ Microemulsion::performRnaAccumulationReaction(CellData &cellData, double reactio
     bool isSwitched = false;
     if (randomChoiceWithProbability(dtChem * reactionRatePlus))
     {
-        Grid::incrementRnaContent(cellData);
+        cellData.incrementRnaContent();
         isSwitched = true;
     }
     return isSwitched;
@@ -537,7 +513,7 @@ bool Microemulsion::performRnaDecayReaction(CellData &cellData, double reactionR
     {
         if (randomChoiceWithProbability(dtChem * reactionRateMinus))
         {
-            Grid::decrementRnaContent(cellData);
+            cellData.decrementRnaContent();
             isSwitched = true;
         }
     }
@@ -548,9 +524,12 @@ RnaCounter Microemulsion::performRnaTransferReaction(int column, int row, double
 {
     RnaCounter transferredRnaCount = 0;
     CellData &cellData = grid.getElement(column, row);
-    RnaCounter rnaContent = Grid::getRnaContent(cellData);
+    RnaCounter rnaContent = cellData.getRnaContent();
+//    std::vector<std::reference_wrapper<CellData>> rbpNeighbours = grid.getNeighboursMatchingConditions(column, row,
+//                                                                                                       CellData::isRBP);
     std::vector<std::reference_wrapper<CellData>> rbpNeighbours = grid.getNeighboursMatchingConditions(column, row,
-                                                                                                       Grid::isRBP);
+                                                                                                       [](CellData &cd) -> bool {return cd.isRBP();}
+                                                                                                       );
     
     unsigned long numNeighbours = rbpNeighbours.size();
     if (numNeighbours > 0)
@@ -562,10 +541,10 @@ RnaCounter Microemulsion::performRnaTransferReaction(int column, int row, double
             {
                 // Choose a random RBP-neighbour and transfer 1 RNA to it
                 CellData &randomNeighbour = rbpNeighbours[distribution(randomGenerator)];
-                Grid::decrementRnaContent(cellData);
-                Grid::incrementRnaContent(randomNeighbour);
+                cellData.decrementRnaContent();
+                randomNeighbour.incrementRnaContent();
                 //todo: evaluate if setting activity of RBP is now superfluous
-                Grid::setActivity(randomNeighbour.chemicalProperties, ACTIVE);
+                randomNeighbour.setActivity(ACTIVE);
             }
         }
     }
@@ -577,11 +556,11 @@ bool Microemulsion::performTranscribabilitySwitchingReaction(CellData &cellData,
                                                              double reactionRateMinus)
 {
     bool isSwitched = false;
-    if (Grid::isTranscribable(cellData))
+    if (cellData.isTranscribable())
     {
         if (randomChoiceWithProbability(dtChem * reactionRateMinus))
         {
-            Grid::setTranscribability(cellData.flags, NOT_TRANSCRIBABLE);
+            cellData.setTranscribability(NOT_TRANSCRIBABLE);
             isSwitched = true;
         }
     }
@@ -589,7 +568,7 @@ bool Microemulsion::performTranscribabilitySwitchingReaction(CellData &cellData,
     {
         if (randomChoiceWithProbability(dtChem * reactionRatePlus))
         {
-            Grid::setTranscribability(cellData.flags, TRANSCRIBABLE);
+            cellData.setTranscribability(TRANSCRIBABLE);
             isSwitched = true;
         }
     }
@@ -657,14 +636,14 @@ void Microemulsion::setTranscriptionInhibitionOnChains(const std::set<ChainId> &
         for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
         {
             CellData &curCell = grid.getElement(column, row);
-            std::set<ChainId> curCellChains = grid.chainsCellBelongsTo(curCell);
+            std::set<ChainId> curCellChains = curCell.chainsCellBelongsTo();
             std::set<ChainId> matches;
             set_intersection(curCellChains.begin(), curCellChains.end(),
                              targetChains.begin(), targetChains.end(),
                              inserter(matches, matches.begin()));
             if (!matches.empty())
             {
-                Grid::setTranscriptionInhibition(curCell.flags, inhibition);
+                curCell.setTranscriptionInhibition(inhibition);
             }
         }
     }

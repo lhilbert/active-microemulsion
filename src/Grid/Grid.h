@@ -74,136 +74,29 @@ public:
     
     void pickRandomNeighbourOf(int i, int j, int &neighbourI, int &neighbourJ);
     
-    static inline ChemicalProperties getChemicalProperties(CellData &cellData)
-    {
-        return cellData.chemicalProperties;
-    }
-    
     inline ChemicalProperties getChemicalProperties(int column, int row) const
     {
-        return getChemicalProperties(getElement(column, row));
-    }
-    
-    static inline ChemicalSpecies getChemicalSpecies(ChemicalProperties chemicalProperties)
-    {
-        return static_cast<ChemicalSpecies>((chemicalProperties >> SPECIES_BIT) & 1U);
-    }
-    
-    static inline ChemicalSpecies getChemicalSpecies(CellData &cellData)
-    {
-        return getChemicalSpecies(getChemicalProperties(cellData));
+        return getElement(column, row).getChemicalProperties();
     }
     
     inline ChemicalSpecies getChemicalSpecies(int column, int row) const
     {
-        return getChemicalSpecies(getChemicalProperties(column, row));
-    }
-    
-    static inline bool isChromatin(ChemicalProperties chemicalProperties)
-    {
-        return getChemicalSpecies(chemicalProperties) == CHROMATIN;
-    }
-    
-    static inline bool isChromatin(CellData &cellData)
-    {
-        return isChromatin(getChemicalProperties(cellData));
+        return CellData::getChemicalSpecies(getChemicalProperties(column, row));
     }
     
     inline bool isChromatin(int column, int row)
     {
-        return isChromatin(getElement(column, row));
-    }
-    
-    static inline bool isRBP(ChemicalProperties chemicalProperties)
-    {
-        return getChemicalSpecies(chemicalProperties) == RBP;
-    }
-    
-    static inline bool isRBP(CellData &cellData)
-    {
-        return isRBP(getChemicalProperties(cellData));
-    }
-    
-    static inline bool isActive(ChemicalProperties chemicalProperties)
-    {
-        return ((chemicalProperties >> ACTIVE_BIT) & 1U) == ACTIVE;
-    }
-    
-    static inline bool isActive(CellData &cellData)
-    {
-        return isActive(getChemicalProperties(cellData));
-    }
-    
-    static inline bool isActiveChromatin(CellData &cellData)
-    {
-        return isActiveChromatin(getChemicalProperties(cellData));
-    }
-    
-    static inline bool isActiveChromatin(ChemicalProperties chemicalProperties)
-    {
-        return isChromatin(chemicalProperties) && isActive(chemicalProperties);
-    }
-    
-    static inline bool isInactiveChromatin(ChemicalProperties chemicalProperties)
-    {
-        return isChromatin(chemicalProperties) && !isActive(chemicalProperties);
+        return getElement(column, row).isChromatin();
     }
     
     inline bool isInactiveChromatin(int column, int row)
     {
-        return isInactiveChromatin(getElement(column, row).chemicalProperties);
-    }
-    
-    static inline bool isActiveRBP(CellData &cellData)
-    {
-        return isActiveRBP(getChemicalProperties(cellData));
-    }
-    
-    static inline bool isActiveRBP(ChemicalProperties chemicalProperties)
-    {
-        return isRBP(chemicalProperties) && isActive(chemicalProperties);
-    }
-    
-    static inline bool isInactiveRBP(ChemicalProperties chemicalProperties)
-    {
-        return isRBP(chemicalProperties) && !isActive(chemicalProperties);
-    }
-    
-    static inline RnaCounter getRnaContent(CellData &cellData)
-    {
-        return cellData.rnaContent;
-    }
-    
-    static inline void incrementRnaContent(CellData &cellData, RnaCounter amount=1)
-    {
-        //todo: Here include an anti-overflow check!
-        cellData.rnaContent += amount;
-    }
-    
-    static inline void decrementRnaContent(CellData &cellData, RnaCounter amount=1)
-    {
-        //todo: Here include an anti-underflow check!
-        cellData.rnaContent -= amount;
-    }
-    
-    static inline Flags getFlags(CellData &cellData)
-    {
-        return cellData.flags;
+        return getElement(column, row).isInactiveChromatin();
     }
     
     inline Flags getFlags(int column, int row) const
     {
-        return getFlags(getElement(column, row));
-    }
-    
-    static inline bool isTranscribable(CellData &cellData)
-    {
-        return ((getFlags(cellData) >> TRANSCRIBABLE_BIT) & 1U) == TRANSCRIBABLE;
-    }
-    
-    static inline bool isTranscriptionInhibited(CellData &cellData)
-    {
-        return ((getFlags(cellData) >> TRANSCRIPTION_INHIBITION_BIT) & 1U) == TRANSCRIPTION_INHIBITED;
+        return getElement(column, row).getFlags();
     }
     
     // This is used to check if a swap is meaningless, however this must not include a chain check!
@@ -212,41 +105,25 @@ public:
     {
         CellData &cellData = getElement(column, row);
         CellData &nCellData = getElement(nColumn, nRow);
-        return (getChemicalProperties(cellData) == getChemicalProperties(nCellData))
-               && (getFlags(cellData) == getFlags(nCellData));
+        return (cellData.getChemicalProperties() == nCellData.getChemicalProperties())
+               && (cellData.getFlags() == nCellData.getFlags());
     }
     
     int getSpeciesCount(ChemicalSpecies chemicalSpecies);
     
-    static void setChemicalSpecies(ChemicalProperties &target, ChemicalSpecies species);
-    
     void setChemicalSpecies(int column, int row, ChemicalSpecies species);
     
-    static void setActivity(ChemicalProperties &target, Activity activity);
-    
     void setActivity(int column, int row, Activity activity);
-    
-    static void setChemicalProperties(ChemicalProperties &target, ChemicalSpecies species, Activity activity);
     
     void setChemicalProperties(int column, int row, ChemicalSpecies species, Activity activity);
     
     void setChemicalProperties(int column, int row, ChemicalProperties chemicalProperties);
     
-    static ChemicalProperties chemicalPropertiesOf(ChemicalSpecies species, Activity activity);
-    
-    static void setFlags(Flags &target, Transcribability transcribability, TranscriptionInhibition inhibition);
-    
     void setFlags(int column, int row, Flags flags);
-    
-    static void setTranscribability(Flags &target, Transcribability transcribability);
     
     void setTranscribability(int column, int row, Transcribability transcribability);
     
-    static void setTranscriptionInhibition(Flags &target, TranscriptionInhibition inhibition);
-    
     void setTranscriptionInhibition(int column, int row, TranscriptionInhibition inhibition);
-    
-    static Flags flagsOf(Transcribability transcribability, TranscriptionInhibition inhibition);
     
     // Set chain properties in the first slot available and return the index of the slot used
     size_t setChainProperties(int column, int row,
@@ -254,8 +131,6 @@ public:
     
     // Check cell of given coordinates and return chains it belongs to
     std::vector<std::reference_wrapper<ChainProperties>> chainsCellBelongsTo(int column, int row);
-    
-    std::set<ChainId> chainsCellBelongsTo(CellData &cellData);
     
     // Check if a given cell belongs to a chain with given Id
     // Returns position in chain properties array if found, MAX_CROSSING_CHAINS if not found
@@ -302,17 +177,6 @@ private:
     inline bool isPositionInChainPropertiesArrayValid(unsigned char position);
     
     ChainId getNewChainId();
-    
-    inline static bool getBit(unsigned char bitfield, unsigned char bit)
-    {
-        return static_cast<bool>((bitfield >> bit) & 1U);
-    }
-    
-    inline static void setBit(unsigned char &bitfield, unsigned char bit, unsigned char value)
-    {
-        // Set the SPECIES_BIT to the species value
-        bitfield ^= (-value ^ bitfield) & (1U << bit);
-    }
     
     void initializeCellProperties(int column, int row, ChemicalProperties chemicalProperties, Flags flags,
                                   bool enforceChainIntegrity, ChainId chainId, unsigned int chainLength,
