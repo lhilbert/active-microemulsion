@@ -199,17 +199,18 @@ public:
     std::set<ChainId> chainsCellBelongsTo();
 
 private:
-    static void setActivity(ChemicalProperties chemicalProperties, Activity activity);
+    static void setActivity(ChemicalProperties &chemicalProperties, Activity activity);
     
-    static void setChemicalSpecies(ChemicalProperties chemicalProperties, ChemicalSpecies species);
+    static void setChemicalSpecies(ChemicalProperties &chemicalProperties, ChemicalSpecies species);
     
-    static void setChemicalProperties(ChemicalProperties chemicalProperties, ChemicalSpecies species, Activity activity);
+    static void setChemicalProperties(ChemicalProperties &chemicalProperties, ChemicalSpecies species,
+                                      Activity activity);
     
-    static void setTranscribability(Flags flags, Transcribability transcribability);
+    static void setTranscribability(Flags &flags, Transcribability transcribability);
     
-    static void setTranscriptionInhibition(Flags flags, TranscriptionInhibition inhibition);
+    static void setTranscriptionInhibition(Flags &flags, TranscriptionInhibition inhibition);
     
-    static void setFlags(Flags flags, Transcribability transcribability, TranscriptionInhibition inhibition);
+    static void setFlags(Flags &flags, Transcribability transcribability, TranscriptionInhibition inhibition);
 };
 
 #endif //ACTIVE_MICROEMULSION_CELLDATA_H

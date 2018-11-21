@@ -8,7 +8,7 @@ void CellData::setChemicalSpecies(ChemicalSpecies species)
 {
     Utils::setBit(chemicalProperties, SPECIES_BIT, species);
 }
-void CellData::setChemicalSpecies(ChemicalProperties chemicalProperties, ChemicalSpecies species)
+void CellData::setChemicalSpecies(ChemicalProperties &chemicalProperties, ChemicalSpecies species)
 {
     Utils::setBit(chemicalProperties, SPECIES_BIT, species);
 }
@@ -17,7 +17,7 @@ void CellData::setActivity(Activity activity)
 {
     Utils::setBit(chemicalProperties, ACTIVE_BIT, activity);
 }
-void CellData::setActivity(ChemicalProperties chemicalProperties, Activity activity)
+void CellData::setActivity(ChemicalProperties &chemicalProperties, Activity activity)
 {
     Utils::setBit(chemicalProperties, ACTIVE_BIT, activity);
 }
@@ -28,7 +28,7 @@ void CellData::setChemicalProperties(ChemicalSpecies species, Activity activity)
     setActivity(activity);
 }
 
-void CellData::setChemicalProperties(ChemicalProperties chemicalProperties, ChemicalSpecies species, Activity activity)
+void CellData::setChemicalProperties(ChemicalProperties &chemicalProperties, ChemicalSpecies species, Activity activity)
 {
     setChemicalSpecies(chemicalProperties, species);
     setActivity(chemicalProperties, activity);
@@ -46,7 +46,7 @@ void CellData::setFlags(Transcribability transcribability, TranscriptionInhibiti
     setTranscribability(transcribability);
     setTranscriptionInhibition(inhibition);
 }
-void CellData::setFlags(Flags flags, Transcribability transcribability, TranscriptionInhibition inhibition)
+void CellData::setFlags(Flags &flags, Transcribability transcribability, TranscriptionInhibition inhibition)
 {
     setTranscribability(flags, transcribability);
     setTranscriptionInhibition(flags, inhibition);
@@ -62,12 +62,12 @@ void CellData::setTranscriptionInhibition(TranscriptionInhibition inhibition)
     Utils::setBit(flags, TRANSCRIPTION_INHIBITION_BIT, inhibition);
 }
 
-void CellData::setTranscribability(Flags flags, Transcribability transcribability)
+void CellData::setTranscribability(Flags &flags, Transcribability transcribability)
 {
     Utils::setBit(flags, TRANSCRIBABLE_BIT, transcribability);
 }
 
-void CellData::setTranscriptionInhibition(Flags flags, TranscriptionInhibition inhibition)
+void CellData::setTranscriptionInhibition(Flags &flags, TranscriptionInhibition inhibition)
 {
     Utils::setBit(flags, TRANSCRIPTION_INHIBITION_BIT, inhibition);
 }
