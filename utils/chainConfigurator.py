@@ -3,6 +3,8 @@
 # chainConfigurator.py
 # Script for generating chain configuration files to be used in active-microemulsion
 #
+# NOTE: This is python3 code but it is fully backward compatible with python2, just call the script via the interpreter.
+#
 
 import argparse
 import numpy as np
@@ -165,8 +167,8 @@ class Configurator:
         n = round(sqrt(self.numChromosomes))
         domainWidth = self.domainDimensions[0]
         domainHeight = self.domainDimensions[1]
-        hStep = floor(domainWidth / n)
-        vStep = floor(domainHeight / n)
+        hStep = int(floor(domainWidth / n))
+        vStep = int(floor(domainHeight / n))
         self.chromosomeStartPositions = \
             [(x, y) for y in range(1, domainHeight + 1, vStep) for x in range(1, domainWidth + 1, hStep)]
         self.chromosomes = \
