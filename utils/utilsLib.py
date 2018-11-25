@@ -375,12 +375,19 @@ class FileSequence:
     @staticmethod
     def expandSequence(inputFileSequence):
         fileSequence = []
+        removeExtra = True
         for f in inputFileSequence:
+            if "EXTRA" in f:    # If EXTRA files are explicitly passed, then do not remove them from the sequence!
+                removeExtra = False
             if '*' in f:  # In this case f is a pattern to expand
                 fileSequence.extend(FileSequence.expand(f))
             else:
                 fileSequence.append(f)
-        return FileSequence.removeItemContainingSubstring(FileSequence.natsort(fileSequence), "EXTRA")
+        if removeExtra:
+            res = FileSequence.removeItemContainingSubstring(FileSequence.natsort(fileSequence), "EXTRA")
+        else:
+            res = FileSequence.natsort(fileSequence)
+        return res
 
 
 class CsvWriter:
