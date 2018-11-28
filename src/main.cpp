@@ -51,6 +51,7 @@ int main(int argc, const char **argv)
             ("debug,d", "Enable the debug logging level")
             ("coarse-debug", "Enable the coarse_debug logging level")
             ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
+            ("Quiet,Q", "Restrict logging to WARNING,ERROR levels")
             ("minutes,m", "Time variables are expressed in minutes instead of seconds")
             ("no-chain-integrity", "Do not enforce chain integrity")
             ("no-sticky-boundary", "Do not make boundary sticky to chromatin")
@@ -125,6 +126,7 @@ int main(int argc, const char **argv)
     bool debugMode = varsMap.count("debug") > 0;
     bool coarseDebugMode = varsMap.count("coarse-debug") > 0;
     bool quietMode = varsMap.count("quiet") > 0;
+    bool QuietMode = varsMap.count("Quiet") > 0;
     bool enforceChainIntegrity = varsMap.count("no-chain-integrity") == 0;
     bool stickyBoundary = varsMap.count("no-sticky-boundary") == 0;
     bool flavopiridolSwitchPassed = varsMap.count("flavopiridol") > 0;
@@ -241,6 +243,10 @@ int main(int argc, const char **argv)
     {
         logger.setDebugLevel(PRODUCTION);
     }
+    else if (QuietMode)
+    {
+        logger.setDebugLevel(WARNING);
+    }
     logger.openLogFile();
     logger.setStartTime();
     logger.logArgv(argc, argv); // Logging invocation command.
@@ -249,6 +255,7 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(debugMode));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(coarseDebugMode));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(quietMode));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(QuietMode));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(enforceChainIntegrity));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(stickyBoundary));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(isTimeInMinutes));

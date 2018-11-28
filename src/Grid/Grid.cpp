@@ -30,10 +30,11 @@ void Grid::deallocateGrid()
 
 Grid::Grid(int columns, int rows, Logger &logger) : columns(columns),
                                                     rows(rows),
+                                                    numElements(columns * rows),
                                                     rowDistribution(1, rows),
                                                     columnDistribution(1, columns),
-                                                    rowOffsetDistribution(-1, 1),
-                                                    columnOffsetDistribution(-1, 1),
+                                                    elementDistribution(0, numElements-1),
+                                                    rowColOffsetDistribution(0, 8),
                                                     logger(logger),
                                                     nextAvailableChainId(1)
 {
@@ -63,26 +64,31 @@ inline int Grid::pickColumn()
 
 void Grid::pickRandomElement(int &i, int &j)
 {
-    i = pickColumn();
-    j = pickRow();
+    int elementId = elementDistribution(randomNumberGenerator);
+    i = 1 + (elementId % getColumns());
+    j = 1 + (elementId / getColumns());
 }
 
-inline int Grid::pickRowOffset()
+inline int Grid::pickRowColOffset()
 {
-    return rowOffsetDistribution(randomNumberGenerator);
+    return rowColOffsetDistribution(randomNumberGenerator);
 }
 
-inline int Grid::pickColumnOffset()
+void Grid::pickNeighbourOffsets(int &rowOffset, int &colOffset)
 {
-    return columnOffsetDistribution(randomNumberGenerator);
+    int rowColOffset = pickRowColOffset();
+    rowOffset = (rowColOffset / 3) - 1;
+    colOffset = (rowColOffset % 3) - 1;
 }
 
 void Grid::pickRandomNeighbourOf(int i, int j, int &neighbourI, int &neighbourJ)
 {
     do
     {
-        neighbourI = i + pickColumnOffset();
-        neighbourJ = j + pickRowOffset();
+        int rowOffset, colOffset;
+        pickNeighbourOffsets(rowOffset, colOffset);
+        neighbourI = i + colOffset;
+        neighbourJ = j + rowOffset;
     } while (
             (neighbourI == i && neighbourJ == j) // We want a neighbour, not the cell itself
             || neighbourI < 1 || neighbourI > columns // We want to be inside the grid
@@ -119,7 +125,8 @@ void Grid::setChemicalProperties(int column, int row, ChemicalSpecies species, A
 
 void Grid::setChemicalProperties(int column, int row, ChemicalProperties chemicalProperties)
 {
-    setChemicalProperties(column, row, static_cast<ChemicalSpecies>(BitwiseOperations::getBit(chemicalProperties, SPECIES_BIT)),
+    setChemicalProperties(column, row,
+                          static_cast<ChemicalSpecies>(BitwiseOperations::getBit(chemicalProperties, SPECIES_BIT)),
                           static_cast<Activity>(BitwiseOperations::getBit(chemicalProperties, ACTIVE_BIT)));
 }
 
@@ -136,6 +143,11 @@ void Grid::setTranscribability(int column, int row, Transcribability transcribab
 void Grid::setTranscriptionInhibition(int column, int row, TranscriptionInhibition inhibition)
 {
     getElement(column, row).setTranscriptionInhibition(inhibition);
+}
+
+CellData &Grid::getElement(int elementId)
+{
+    return data[0][elementId]; // data[0] is the pointer to the array storing the entire grid in 1D
 }
 
 CellData &Grid::getElement(int column, int row)
@@ -312,5 +324,15 @@ bool Grid::isCellWithinInternalDomain(int column, int row)
            && column <= getLastColumn()
            && row >= getFirstRow()
            && row <= getLastRow();
+}
+
+const int Grid::getColumns() const
+{
+    return columns;
+}
+
+const int Grid::getRows() const
+{
+    return rows;
 }
 

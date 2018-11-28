@@ -23,15 +23,15 @@ class Grid
 {
     friend GridInitializer;
     
-public:
+private:
+//    const unsigned char dim = 2;
     // Columns and rows are the values of the inner number of rows and columns, without the external halo.
     const int columns, rows;
     std::mt19937 randomNumberGenerator;
-    
-private:
+    int numElements;
     CellData **data;
-    std::uniform_int_distribution<int> rowDistribution, columnDistribution,
-            rowOffsetDistribution, columnOffsetDistribution;
+    std::uniform_int_distribution<int> rowDistribution, columnDistribution, elementDistribution,
+            rowColOffsetDistribution;
     Logger &logger;
     ChainId nextAvailableChainId;
 
@@ -39,6 +39,10 @@ public:
     Grid(int columns, int rows, Logger &logger);
     
     ~Grid();
+    
+    const int getColumns() const;
+    
+    const int getRows() const;
     
     inline int getFirstRow() const
     {
@@ -64,6 +68,13 @@ public:
     
     const CellData **getData();
     
+    /**
+     * Get an element reference by using a 1D id.
+     * @param elementId
+     * @return
+     */
+    CellData &getElement(int elementId);
+ 
     CellData &getElement(int column, int row);
     
     CellData &getElement(int column, int row) const;
@@ -165,12 +176,12 @@ private:
     void deallocateGrid();
     
     inline int pickRow();
-    
+
     inline int pickColumn();
     
-    inline int pickRowOffset();
+    inline int pickRowColOffset();
     
-    inline int pickColumnOffset();
+    void pickNeighbourOffsets(int &rowOffset, int &colOffset);
     
     static void walkOnGrid(int &column, int &row, signed char colOffset, signed char rowOffset);
     

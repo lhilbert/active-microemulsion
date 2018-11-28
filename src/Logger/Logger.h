@@ -50,8 +50,8 @@ public:
     const char * getDebugLevelStr();
     void openLogFile();
     void logRawString(char const *fmt, ...);
-    void logEvent(DebugLevel eventDebugLevel, double t, char const *fmt, ...);
-    void logMsg(DebugLevel eventDebugLevel, char const *fmt, ...);
+    virtual void logEvent(DebugLevel eventDebugLevel, double t, char const *fmt, ...);
+    virtual void logMsg(DebugLevel eventDebugLevel, char const *fmt, ...);
     void logArgv(int argc, const char **argv);
 //    void logVars(DebugLevel eventDebugLevel, char const * fmt, ...);
     void flush();

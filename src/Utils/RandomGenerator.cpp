@@ -5,3 +5,4 @@
 #include "RandomGenerator.h"
 
 thread_local std::mt19937 RandomGenerator::rng(std::random_device{}());
+//std::mt19937 RandomGenerator::rng(std::random_device{}());
