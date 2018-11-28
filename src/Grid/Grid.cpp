@@ -326,12 +326,12 @@ bool Grid::isCellWithinInternalDomain(int column, int row)
            && row <= getLastRow();
 }
 
-const int Grid::getColumns() const
+int Grid::getColumns() const
 {
     return columns;
 }
 
-const int Grid::getRows() const
+int Grid::getRows() const
 {
     return rows;
 }
