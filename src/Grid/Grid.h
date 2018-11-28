@@ -40,9 +40,9 @@ public:
     
     ~Grid();
     
-    const int getColumns() const;
+    int getColumns() const;
     
-    const int getRows() const;
+    int getRows() const;
     
     inline int getFirstRow() const
     {
