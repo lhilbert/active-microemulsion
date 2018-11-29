@@ -8,8 +8,9 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg -O0 -Wall -pedantic -Werror") #debug
 ELSEIF(CMAKE_BUILD_TYPE MATCHES Release)
     message(">>> Release mode")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg -O3 -Wall -pedantic -Werror")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto -pg -O3 -Wall -pedantic -Werror")
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
+set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_CXX_FLAGS}")
 
 #set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 #set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
