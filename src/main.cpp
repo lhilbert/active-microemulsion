@@ -30,6 +30,7 @@ int main(int argc, const char **argv)
     double cutoffTimeFraction = 1;
     int rows = 50, columns = 50;
     int numThreads = 1;
+    unsigned int swapRounds = 0;
     int swapsPerPixelPerUnitTime = 500;
     int numVisualizationOutputs = 100; //todo read this from config
     double snapshotInterval = -1;
@@ -154,11 +155,8 @@ int main(int argc, const char **argv)
     extraSnapshotTimeOffset *= timeMultiplier;
     extraSnapshotTimeAbs *= timeMultiplier;
     cutoffTime *= timeMultiplier;
-    //
-    int numInnerCells = rows * columns;
-//    double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
-    int cellsPerColour = numInnerCells / (Microemulsion::colourStride * Microemulsion::colourStride);
-    double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * Microemulsion::colourStride * Microemulsion::colourStride); // The dt used for timestepping.
+    
+    // Start timers computation
     kSet.insert(kOn);
     kSet.insert(kOff);
     kSet.insert(kChromPlus);
@@ -167,8 +165,9 @@ int main(int argc, const char **argv)
     kSet.insert(kRnaMinus);
     kSet.insert(kRnaTransfer);
     kMax = *kSet.rbegin(); // Get the maximum on the set
+    //dtChem
     double dtChem = 0.1 / kMax;
-    
+    //snapshotInterval
     if (snapshotInterval <= 0) // Auto-compute it only if it was not set
     {
         snapshotInterval =
@@ -178,6 +177,22 @@ int main(int argc, const char **argv)
     {
         numVisualizationOutputs = static_cast<int>(floor(endTime / snapshotInterval));
     }
+    //dt
+    int numInnerCells = rows * columns;
+//    double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
+    int cellsPerColour = numInnerCells / (Microemulsion::colourStride * Microemulsion::colourStride);
+    
+    // Compute swaps round if required
+    double alpha = (double) (swapsPerPixelPerUnitTime * Microemulsion::colourStride * Microemulsion::colourStride);
+    if (swapRounds == 0)
+    {
+        int safetyFactor = 3;
+        double k = fmin(dtChem, snapshotInterval);
+        swapRounds = static_cast<unsigned int>(ceil(k * alpha / safetyFactor));
+    }
+    double dt = swapRounds * 1.0 / alpha; // The dt used for timestepping.
+    //
+    
     if (cutoffTime < 0)
     {
         cutoffTime = endTime / cutoffTimeFraction;
@@ -292,6 +307,7 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numVisualizationOutputs));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(extraSnapshotTimeOffset));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numThreads));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(swapRounds));
     
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dt));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtChem));
@@ -398,9 +414,8 @@ int main(int argc, const char **argv)
             t += dt;
 //            swapsPerformed += microemulsion.performRandomSwap();
 //            ++swapAttempts;
-            unsigned int rounds = 1;
-            swapsPerformed += microemulsion.performRandomSwaps(rounds);
-            swapAttempts += cellsPerColour * rounds;
+            swapsPerformed += microemulsion.performRandomSwaps(swapRounds);
+            swapAttempts += cellsPerColour * swapRounds;
             
             // Now check if to perform chemical reactions
             if (t >= nextChemTime)

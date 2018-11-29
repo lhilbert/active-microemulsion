@@ -14,9 +14,9 @@
 class RandomGenerator
 {
 private:
-    thread_local static std::mt19937 rng;
-//    static std::mt19937 rng;
-//    #pragma omp threadprivate(rng)
+//    thread_local static std::mt19937 rng;
+    static std::mt19937 rng;
+    #pragma omp threadprivate(rng)
 
 public:
     static RandomGenerator& getInstance()

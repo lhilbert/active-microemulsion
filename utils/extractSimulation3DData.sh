@@ -20,13 +20,14 @@ fi
 utilsDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 analyze="${utilsDir}/covRnaTxn3dAnalysis.py ${extraArgs}"
 
-controlDirs="Out_*m_t1_E* Out_*m_t1_activate10_E*"
-flavopiridolDirs="Out_*m_t1_flavopiridol* Out_*m_t1_activate10_flavopiridol*"
-actinomycinDDirs="Out_*m_t1_actinomycin-D* Out_*m_t1_activate10_actinomycin-D*"
-
 csvBasename=$(basename ${targetDir})
 
 pushd ${targetDir}
+
+controlDirs="$(ls | grep -v "activate10" | grep "E[34][0-9]") Out_*m_t1_E* Out_*m_t1_activate10_E*"
+flavopiridolDirs="$(ls | grep -v "activate10" | grep "E[34][0-9]") Out_*m_t1*flavopiridol*"
+actinomycinDDirs="$(ls | grep -v "activate10" | grep "E[34][0-9]") Out_*_m_t1_E* Out_*m_t1*actinomycin-D*"
+
 for f in ${controlDirs}; do
 	[[ -d "$f" ]] && ${analyze} -S ${controlDirs} -d ${csvBasename}_control.csv && sed -i s/"SnapshotNumber,X,Y,Z"/"SnapshotNumber,TXN,RNA,CoV(DNA)"/ ${csvBasename}_control.csv
 	break

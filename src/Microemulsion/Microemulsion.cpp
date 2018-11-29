@@ -83,18 +83,27 @@ bool Microemulsion::performRandomSwap(int x, int y)
 unsigned int Microemulsion::performRandomSwaps(unsigned int rounds)
 {
     unsigned int count = 0;
-    for (unsigned int r = 0; r < rounds; ++r)
+    int colour = 0;
+    #pragma omp parallel
     {
-        int colour = coloursDistribution(randomGenerator);
-        int rowColour = colour/colourStride;
-        int columnColour = colour%colourStride;
-
-        #pragma omp parallel for firstprivate(rowColour, columnColour) reduction(+:count) // schedule(dynamic)
-        for (int row = grid.getFirstRow() + rowColour; row < grid.getLastRow(); row += colourStride)
+        for (unsigned int r = 0; r < rounds; ++r)
         {
-            for (int column = grid.getFirstColumn() + columnColour; column < grid.getLastColumn(); column += colourStride)
+            #pragma omp single
             {
-                count += performRandomSwap(column, row);
+                colour = coloursDistribution(randomGenerator);
+            }
+            #pragma omp barrier
+            unsigned char rowColour = colour / colourStride;
+            unsigned char columnColour = colour % colourStride;
+
+            #pragma omp for reduction(+:count) schedule(dynamic)
+            for (int row = grid.getFirstRow() + rowColour; row < grid.getLastRow(); row += colourStride)
+            {
+                for (int column = grid.getFirstColumn() + columnColour;
+                     column < grid.getLastColumn(); column += colourStride)
+                {
+                    count += performRandomSwap(column, row);
+                }
             }
         }
     }
