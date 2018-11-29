@@ -89,7 +89,7 @@ unsigned int Microemulsion::performRandomSwaps(unsigned int rounds)
         int rowColour = colour/colourStride;
         int columnColour = colour%colourStride;
 
-        #pragma omp parallel for firstprivate(rowColour, columnColour) reduction(+:count) schedule(dynamic)
+        #pragma omp parallel for firstprivate(rowColour, columnColour) reduction(+:count) // schedule(dynamic)
         for (int row = grid.getFirstRow() + rowColour; row < grid.getLastRow(); row += colourStride)
         {
             for (int column = grid.getFirstColumn() + columnColour; column < grid.getLastColumn(); column += colourStride)

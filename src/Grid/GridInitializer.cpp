@@ -8,6 +8,8 @@
 
 int GridInitializer::initializeInnerGridAs(Grid &grid, ChemicalProperties chemicalProperties, Flags flags)
 {
+    // OMP here is used for first touch
+    #pragma omp parallel for
     for (int j = grid.getFirstRow(); j <= grid.getLastRow(); ++j)
     {
         for (int i = grid.getFirstColumn(); i <= grid.getLastColumn(); ++i)

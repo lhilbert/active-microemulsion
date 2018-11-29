@@ -16,10 +16,12 @@ void Grid::allocateGrid()
     int extendedColumns = columns + 2;
     data = new CellData *[extendedRows];
     data[0] = new CellData[extendedRows * extendedColumns](); // "()" at the end ensure initialization to 0
-    for (int i = 1; i < extendedRows; ++i)
+    #pragma omp parallel for
+    for (int i = 1; i < extendedRows - 1; ++i)
     {
         data[i] = data[0] + i * extendedColumns;
     }
+    data[extendedRows - 1] = data[0] + (extendedRows - 1) * extendedColumns;
 }
 
 void Grid::deallocateGrid()
