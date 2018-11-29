@@ -13,12 +13,16 @@
 
 class Microemulsion
 {
+public:
+    static const int colourStride = 5;
+    
 private:
     Grid &grid;
     Logger &logger;
     double omega, deltaEmin;
     std::mt19937 randomGenerator;
     std::uniform_real_distribution<double> uniformProbabilityDistribution;
+    std::uniform_int_distribution<int> coloursDistribution;
     double dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinusRbp, kRnaMinusTxn, kRnaTransfer;
     bool isBoundarySticky;
 
@@ -53,10 +57,10 @@ public:
     
     /**
      * Attempts the given amount of swaps and returns how many actually done.
-     * @param amount The number of swaps to attempt.
+     * @param rounds The number of swaps to attempt.
      * @return The number of swaps successfully performed.
      */
-    unsigned int performRandomSwaps(unsigned int amount);
+    unsigned int performRandomSwaps(unsigned int rounds);
     
     /**
      * Perform the chemical reactions on the entire grid.
@@ -138,6 +142,8 @@ private:
     RnaCounter performRnaTransferReaction(int column, int row, double transferRate);
     
     bool performTranscribabilitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
+    
+    bool performRandomSwap(int x, int y);
 };
 
 

@@ -11,6 +11,7 @@ Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double de
                              double kRnaTransfer, bool isBoundarySticky)
         : grid(grid), logger(logger), omega(omega),
           uniformProbabilityDistribution(0.0, 1.0),
+          coloursDistribution(0, 24),
           dtChem(deltaTChem),
           kOn(kOn),
           kOff(kOff),
@@ -28,9 +29,16 @@ Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double de
 
 bool Microemulsion::performRandomSwap()
 {
-    int x, y, nx, ny;
+    int x, y;
     // Get a random element and a random neighbour to attempt a swap.
     grid.pickRandomElement(x, y);
+    
+    return performRandomSwap(x, y);
+}
+
+bool Microemulsion::performRandomSwap(int x, int y)
+{
+    int nx, ny;
     grid.pickRandomNeighbourOf(x, y, nx, ny);
     
     // Here we check if swap allowed by chains, if not we just return.
@@ -51,13 +59,13 @@ bool Microemulsion::performRandomSwap()
     }
     
     // If chains allow the swap, then we check the energy required for it
-    // and we compute its probability
+// and we compute its probability
     double preEnergy = computePartialDifferentialEnergy(x, y, nx, ny);
     double postEnergy = computeSwappedPartialDifferentialEnergy(x, y, nx, ny);
     double deltaEnergy = postEnergy - preEnergy;
     double probability = computeSwapProbability(deltaEnergy);
     logger.logMsg(DEBUG, "Microemulsion::performRandomSwap - deltaEnergy=%f, probability=%f",
-                  deltaEnergy, probability);
+                        deltaEnergy, probability);
     // Then we draw a random choice with the specified probability: if success we swap.
     if (randomChoiceWithProbability(probability))
     {
@@ -72,16 +80,26 @@ bool Microemulsion::performRandomSwap()
     }
 }
 
-unsigned int Microemulsion::performRandomSwaps(unsigned int amount)
+unsigned int Microemulsion::performRandomSwaps(unsigned int rounds)
 {
-    //todo with coloured grid partitioning
-//    unsigned int count = 0;
-//    #pragma omp parallel for schedule(guided) reduce(+:count)
-//    for (int i = 0; i < amount; ++i)
-//    {
-//        performRandomSwap();
-//    }
-    return 0U;
+    unsigned int count = 0;
+    for (unsigned int r = 0; r < rounds; ++r)
+    {
+        int colour = coloursDistribution(randomGenerator);
+        int rowColour = colour/colourStride;
+        int columnColour = colour%colourStride;
+
+        #pragma omp parallel for firstprivate(rowColour, columnColour) reduction(+:count) schedule(dynamic)
+        for (int row = grid.getFirstRow() + rowColour; row < grid.getLastRow(); row += colourStride)
+        {
+            for (int column = grid.getFirstColumn() + columnColour; column < grid.getLastColumn(); column += colourStride)
+            {
+                count += performRandomSwap(column, row);
+            }
+        }
+    }
+
+    return count;
 }
 
 bool Microemulsion::doesPairRequireEnergyCost(int x, int y, int nx, int ny) const

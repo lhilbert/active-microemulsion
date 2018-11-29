@@ -29,6 +29,7 @@ int main(int argc, const char **argv)
     double cutoffTime = -1;
     double cutoffTimeFraction = 1;
     int rows = 50, columns = 50;
+    int numThreads = 1;
     int swapsPerPixelPerUnitTime = 500;
     int numVisualizationOutputs = 100; //todo read this from config
     double snapshotInterval = -1;
@@ -90,6 +91,8 @@ int main(int argc, const char **argv)
 //            ("all-extra-snapshots", "Enables the extra snapshot for all events (it is enabled only for last one by default)")
             ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
             ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
+            ("threads", opt::value<int>(&numThreads)->default_value(-1),
+             "Number of threads to use for parallelization. A negative value lets OMP_NUM_THREADS take precedence")
             ("omega,w", opt::value<double>(&omega)->default_value(0.5),
              "Energy cost for contiguity of non-affine species (omega model parameter)")
             ("sppps,s", opt::value<int>(&swapsPerPixelPerUnitTime)->default_value(333),
@@ -117,11 +120,15 @@ int main(int argc, const char **argv)
         std::cout << argsDescription << std::endl;
         return 1;
     }
-
-//    // debug
-//    std::cout << flavopiridolEvents.size() << std::endl;
-//    return 1;
-//    //
+    
+    if (numThreads < 0)
+    {
+        numThreads = omp_get_num_threads();
+    }
+    else
+    {
+        omp_set_num_threads(numThreads);
+    }
     
     bool debugMode = varsMap.count("debug") > 0;
     bool coarseDebugMode = varsMap.count("coarse-debug") > 0;
@@ -149,7 +156,9 @@ int main(int argc, const char **argv)
     cutoffTime *= timeMultiplier;
     //
     int numInnerCells = rows * columns;
-    double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
+//    double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
+    int cellsPerColour = numInnerCells / (Microemulsion::colourStride * Microemulsion::colourStride);
+    double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * Microemulsion::colourStride * Microemulsion::colourStride); // The dt used for timestepping.
     kSet.insert(kOn);
     kSet.insert(kOff);
     kSet.insert(kChromPlus);
@@ -282,6 +291,7 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kMax));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numVisualizationOutputs));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(extraSnapshotTimeOffset));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numThreads));
     
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dt));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtChem));
@@ -349,7 +359,8 @@ int main(int argc, const char **argv)
                         });
     PgmWriter transcriptionWriter(logger, columns, rows, outputDir + "/microemulsion_Transcription", "Pol II Ser2Phos",
                                   [](const CellData &cellData) -> unsigned char {
-                                      return (unsigned char) 255 * CellData::isActiveChromatin(cellData.chemicalProperties);
+                                      return (unsigned char) 255 *
+                                             CellData::isActiveChromatin(cellData.chemicalProperties);
                                   });
     dnaWriter.setData(grid.getData());
     rnaWriter.setData(grid.getData());
@@ -385,8 +396,11 @@ int main(int argc, const char **argv)
         while (t < nextOutputTime)
         {
             t += dt;
-            swapsPerformed += microemulsion.performRandomSwap();
-            ++swapAttempts;
+//            swapsPerformed += microemulsion.performRandomSwap();
+//            ++swapAttempts;
+            unsigned int rounds = 1;
+            swapsPerformed += microemulsion.performRandomSwaps(rounds);
+            swapAttempts += cellsPerColour * rounds;
             
             // Now check if to perform chemical reactions
             if (t >= nextChemTime)
