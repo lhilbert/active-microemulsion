@@ -48,11 +48,11 @@ public:
     FakeGrid();
 
 public:
-    static std::mt19937 rng;
+    static pcg32 rng;
     #pragma omp threadprivate(rng)
 };
 
-std::mt19937 FakeGrid::rng = RandomGenerator::getInstance().getGenerator();
+pcg32 FakeGrid::rng = RandomGenerator::getInstance().getGenerator();
 
 FakeGrid::FakeGrid()
 {

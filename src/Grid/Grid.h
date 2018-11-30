@@ -11,6 +11,7 @@
 #include <omp.h>
 #include "../Cell/CellData.h"
 #include "../Logger/Logger.h"
+#include "../Utils/RandomGenerator.h"
 
 class GridInitializer;
 
@@ -27,7 +28,7 @@ private:
 //    const unsigned char dim = 2;
     // Columns and rows are the values of the inner number of rows and columns, without the external halo.
     const int columns, rows;
-    static std::mt19937 randomNumberGenerator;
+    static pcg32 randomNumberGenerator;
     #pragma omp threadprivate(randomNumberGenerator)
     int numElements;
     CellData **data;

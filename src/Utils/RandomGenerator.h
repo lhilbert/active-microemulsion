@@ -10,21 +10,25 @@
 #include <functional>
 #include <boost/random/random_device.hpp>
 #include <boost/random/mersenne_twister.hpp>
+// Testing PCG generator: more info at http://www.pcg-random.org/
+#include <pcg_random.hpp>
 
 class RandomGenerator
 {
 private:
-    static std::mt19937 rng;
+//    static std::mt19937 rng;
+    static pcg32 rng;
     #pragma omp threadprivate(rng)
-    static std::mt19937_64 rng64;
+//    static std::mt19937_64 rng64;
+    static pcg64 rng64;
     #pragma omp threadprivate(rng64)
 
 public:
     static RandomGenerator& getInstance();
     
-    std::mt19937& getGenerator();
+    pcg32& getGenerator();
     
-    std::mt19937_64& getGenerator64();
+    pcg64& getGenerator64();
 
 private:
     RandomGenerator();
