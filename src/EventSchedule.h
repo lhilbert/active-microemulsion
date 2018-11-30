@@ -14,6 +14,7 @@ typedef enum CutoffEvent
     ACTIVATE,
     FLAVOPIRIDOL,
     ACTINOMYCIN_D,
+    TXN_SPIKE,
     CUSTOM_EVENT
 } CutoffEvent;
 

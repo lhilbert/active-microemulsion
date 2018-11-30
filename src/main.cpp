@@ -12,8 +12,9 @@
 namespace opt = boost::program_options;
 
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
-                       const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kChromPlus,
-                       double kChromMinus, double kRnaPlus, double kRnaMinus, double kRnaTransfer, double t);
+                       const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kOn,
+                       double kOff, double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
+                       double kRnaTransfer, double t);
 
 void takeSnapshots(Logger &logger, PgmWriter &dnaWriter, PgmWriter &rnaWriter, PgmWriter &transcriptionWriter, double t,
                    unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed,
@@ -38,6 +39,7 @@ int main(int argc, const char **argv)
     std::vector<double> flavopiridolEvents;
     std::vector<double> actinomycinDEvents;
     std::vector<double> activationEvents;
+    std::vector<double> txnSpikeEvents;
     
     // Command-line argument parser. We use Boost Program Options (https://www.boost.org/doc/libs/1_68_0/doc/html/program_options.html).
     opt::options_description argsDescription("Supported options");
@@ -59,6 +61,9 @@ int main(int argc, const char **argv)
             ("activate",
              opt::value<std::vector<double>>(&activationEvents)->multitoken()->zero_tokens()->composing(),
              "Activate transcription at cutoff time. Cutoff time(s) can be specified as parameter")
+            ("txn-spike",
+             opt::value<std::vector<double>>(&txnSpikeEvents)->multitoken()->zero_tokens()->composing(),
+             "Set a transcription spike at cutoff time. Cutoff time(s) can be specified as parameter")
             ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
              "Specify the folder to use for output (log and data)")
             ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
@@ -123,6 +128,7 @@ int main(int argc, const char **argv)
     bool flavopiridolSwitchPassed = varsMap.count("flavopiridol") > 0;
     bool actinomycinDSwitchPassed = varsMap.count("actinomycin-D") > 0;
     bool activateSwitchPassed = varsMap.count("activate") > 0;
+    bool txnSpikeSwitchPassed = varsMap.count("txn-spike") > 0;
     bool isTimeInMinutes = varsMap.count("minutes") > 0;
 //    bool allExtraSnapshots = varsMap.count("all-extra-snapshots") > 0;
     bool allExtraSnapshots = false;
@@ -177,6 +183,18 @@ int main(int argc, const char **argv)
     if (activateSwitchPassed)
     {
         cutoffSchedule.addEvents(activationEvents, ACTIVATE, timeMultiplier);
+    }
+    if (txnSpikeSwitchPassed)
+    {
+        cutoffSchedule.addEvents(txnSpikeEvents, TXN_SPIKE, timeMultiplier);
+        // It seems wise not to auto-reactivate (not yet) since it may take quite a long time for RNA to be produced.
+        // So an activate event has to be passed to specify when to resume with normal rates.
+//        std::vector<double> reactivationEvents;
+//        for (auto evt : txnSpikeEvents)
+//        {
+//            reactivationEvents.push_back(evt + 2*dtChem); //At t + 2*dtChem we reactivate, so it is reset normally after 2 rounds
+//        }
+//        cutoffSchedule.addEvents(reactivationEvents, ACTIVATE, timeMultiplier);
     }
     
     // Populate the extra snapshots' schedule
@@ -348,8 +366,9 @@ int main(int argc, const char **argv)
         if (cutoffSchedule.check(t))
         {
             applyCutoffEvents(logger, cutoffSchedule, microemulsion,
-                              allChains, cutoffChains,
-                              kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kRnaTransfer,
+                              allChains, cutoffChains, kOn, kOff,
+                              kChromPlus, kChromMinus, kRnaPlus, kRnaMinus,
+                              kRnaTransfer,
                               t);
         }
         // Time-stepping loop
@@ -388,20 +407,21 @@ int main(int argc, const char **argv)
 }
 
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
-                       const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kChromPlus,
-                       double kChromMinus, double kRnaPlus, double kRnaMinus, double kRnaTransfer, double t)
+                       const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kOn,
+                       double kOff, double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
+                       double kRnaTransfer, double t)
 {
     auto eventsToApply = eventSchedule.popEventsToApply(t);
     for (auto event : eventsToApply)
     {
         if (event == FLAVOPIRIDOL)
         {
-            logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Flavopiridol condition");
+            logger.logEvent(PRODUCTION, t, "EVENT: Applying Flavopiridol condition");
             microemulsion.setKChromPlus(0);
         }
         else if (event == ACTINOMYCIN_D)
         {
-            logger.logEvent(PRODUCTION, t, "CUTOFF: Applying Actinomycin D condition");
+            logger.logEvent(PRODUCTION, t, "EVENT: Applying Actinomycin D condition");
             microemulsion.setKChromPlus(0);
             microemulsion.setKChromMinus(0);
             microemulsion.setKRnaPlus(0);
@@ -410,8 +430,23 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
         }
         else if (event == ACTIVATE)
         {
-            logger.logEvent(PRODUCTION, t, "CUTOFF: Activating transcription");
+            logger.logEvent(PRODUCTION, t, "EVENT: Activating transcription");
+            microemulsion.setKOn(kOn);
+            microemulsion.setKOff(kOff);
             microemulsion.setKChromPlus(kChromPlus);
+            microemulsion.setKChromMinus(kChromMinus);
+            microemulsion.setKRnaPlus(kRnaPlus);
+            microemulsion.setKRnaMinusRbp(kRnaMinus);
+            microemulsion.setKRnaMinusTxn(kRnaMinus);
+            microemulsion.setKRnaTransfer(kRnaTransfer);
+        }
+        else if (event == TXN_SPIKE)
+        {
+            // Obviously transcription spike includes activation
+            logger.logEvent(PRODUCTION, t, "EVENT: Transcription spike");
+            microemulsion.setKOn(1);
+            microemulsion.setKOff(kOff);
+            microemulsion.setKChromPlus(1); //todo: here confirm if maybe something lower than 1 is to be preferred
             microemulsion.setKChromMinus(kChromMinus);
             microemulsion.setKRnaPlus(kRnaPlus);
             microemulsion.setKRnaMinusRbp(kRnaMinus);
@@ -421,7 +456,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
         else
         {
             // Testing playground here...
-            logger.logEvent(PRODUCTION, t, "CUTOFF: Applying custom cutoff conditions");
+            logger.logEvent(PRODUCTION, t, "EVENT: Applying custom cutoff conditions");
 //            microemulsion.setKRnaMinusRbp(0);
             microemulsion.setTranscriptionInhibitionOnChains(allChains, TRANSCRIPTION_POSSIBLE);
             microemulsion.setTranscriptionInhibitionOnChains(cutoffChains, TRANSCRIPTION_INHIBITED);
