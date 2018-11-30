@@ -1,3 +1,4 @@
+set (CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 find_package(Boost COMPONENTS program_options system filesystem REQUIRED)
 
 add_library(active-microemulsion-lib

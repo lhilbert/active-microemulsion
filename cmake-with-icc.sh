@@ -13,6 +13,10 @@ export CXX=icpc
 #BUILD_TYPE="PGO"
 BUILD_TYPE="Release"
 
+if [[ "$1" != "" ]]; then
+    BUILD_TYPE="$1"
+fi
+
 SRC_DIR="$(pwd)"
 BUILD_DIR="${SRC_DIR}/cmake-build-${CC}"
 TARGET="active-microemulsion"
