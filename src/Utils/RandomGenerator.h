@@ -14,40 +14,25 @@
 class RandomGenerator
 {
 private:
-//    thread_local static std::mt19937 rng;
     static std::mt19937 rng;
     #pragma omp threadprivate(rng)
+    static std::mt19937_64 rng64;
+    #pragma omp threadprivate(rng64)
 
 public:
-    static RandomGenerator& getInstance()
-    {
-        static RandomGenerator instance;
-        return instance;
-    }
+    static RandomGenerator& getInstance();
     
-    std::mt19937& getGenerator()
-    {
-        return rng;
-    }
+    std::mt19937& getGenerator();
+    
+    std::mt19937_64& getGenerator64();
 
 private:
-    RandomGenerator()
-    {
-        seedEngine();
-    }
+    RandomGenerator();
 
-    static void seedEngine()
-    {
-//        rng.seed(boost::random::random_device{}()); // This should be a true PRNG
-        rng.seed(std::random_device{}()); // This is not a true PRNG
-    }
-
+    static void seedEngines();
 public:
     RandomGenerator(RandomGenerator const&) = delete;
     void operator=(RandomGenerator const&) = delete;
 };
-
-//thread_local std::mt19937 RandomGenerator::rng(std::random_device{}());
-//std::mt19937 RandomGenerator::rng(std::random_device{}());
 
 #endif //ACTIVE_MICROEMULSION_RANDOMGENERATOR_H

@@ -6,6 +6,9 @@
 #include "Microemulsion.h"
 #include "../Utils/RandomGenerator.h"
 
+std::mt19937 Microemulsion::randomGenerator = RandomGenerator::getInstance().getGenerator();
+std::mt19937_64 Microemulsion::randomGenerator_64 = RandomGenerator::getInstance().getGenerator64();
+
 Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double deltaTChem, double kOn, double kOff,
                              double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
                              double kRnaTransfer, bool isBoundarySticky)
@@ -24,7 +27,12 @@ Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double de
           isBoundarySticky(isBoundarySticky)
 {
     deltaEmin = -10 * fabs(omega);
-    randomGenerator = RandomGenerator::getInstance().getGenerator();
+    #pragma omp parallel for schedule(static,1)
+    for (int i=0; i < omp_get_num_threads(); ++i)
+    {
+        randomGenerator = RandomGenerator::getInstance().getGenerator();
+        randomGenerator_64 = RandomGenerator::getInstance().getGenerator64();
+    }
 }
 
 bool Microemulsion::performRandomSwap()
@@ -82,15 +90,26 @@ bool Microemulsion::performRandomSwap(int x, int y)
 
 unsigned int Microemulsion::performRandomSwaps(unsigned int rounds)
 {
+    unsigned int rVecLen = rounds/5; // This 5 is floor(pow(2^64 - 1, 1/25)), how many 25's are in a long long
+    unsigned long long *rVec = new unsigned long long[rVecLen];
     unsigned int count = 0;
     int colour = 0;
     #pragma omp parallel
     {
+        #pragma omp for schedule(static,8)
+        for (unsigned int i = 0; i < rVecLen; ++i)
+        {
+            rVec[i] = randomGenerator_64();
+        }
+        
         for (unsigned int r = 0; r < rounds; ++r)
         {
             #pragma omp single
             {
-                colour = coloursDistribution(randomGenerator);
+//                colour = coloursDistribution(randomGenerator);
+                unsigned int i = r / 5;
+                colour = static_cast<int>(rVec[i] % 25);
+                rVec[i] /= 25;
             }
             #pragma omp barrier
             unsigned char rowColour = colour / colourStride;

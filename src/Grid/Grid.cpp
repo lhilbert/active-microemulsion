@@ -9,6 +9,8 @@
 #include "Grid.h"
 #include "../Utils/RandomGenerator.h"
 
+std::mt19937 Grid::randomNumberGenerator = RandomGenerator::getInstance().getGenerator();
+
 // NOTE: nice alloc and dealloc come from https://stackoverflow.com/a/1403157
 void Grid::allocateGrid()
 {
@@ -40,7 +42,11 @@ Grid::Grid(int columns, int rows, Logger &logger) : columns(columns),
                                                     logger(logger),
                                                     nextAvailableChainId(1)
 {
-    randomNumberGenerator = RandomGenerator::getInstance().getGenerator();
+    #pragma omp parallel for schedule(static,1)
+    for (int i=0; i < omp_get_num_threads(); ++i)
+    {
+        randomNumberGenerator = RandomGenerator::getInstance().getGenerator();
+    }
     allocateGrid();
 }
 
