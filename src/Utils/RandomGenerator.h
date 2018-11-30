@@ -13,6 +13,9 @@
 // Testing PCG generator: more info at http://www.pcg-random.org/
 #include <pcg_random.hpp>
 
+static pcg32 fooRNG; // This is just a hack to get icpc to not complain about pcg* types being incomplete...
+static pcg64 fooRNG64;
+
 class RandomGenerator
 {
 private:
