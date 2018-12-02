@@ -122,6 +122,7 @@ unsigned int Microemulsion::performRandomSwaps(unsigned int rounds)
                 rVecLoc[i] = randomGenerator_64();
             }
             memcpy(rVec + (t * rVecLenLoc), rVecLoc, rVecLenLoc);
+            delete[] rVecLoc;
         }
         
         for (unsigned int r = 0; r < rounds; ++r)
@@ -148,7 +149,7 @@ unsigned int Microemulsion::performRandomSwaps(unsigned int rounds)
             }
         }
     }
-
+    delete[] rVec;
     return count;
 }
 
