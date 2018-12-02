@@ -5,6 +5,9 @@
 # [optional ] $2 = a quoted string containing all extra opts to pass down to the "covRnaAnalysis.py" script
 #
 
+EXT="png"
+#EXT="svg"
+
 if [[ $# -lt 1 || $# -gt 2 ]]; then
 	# Wrong number of parameters
 	echo "ERROR: You need to pass one mandatory argument (target directory) and one optional argument (extra parameters for underlying script)."
@@ -24,21 +27,20 @@ plotBasename="$(basename ${targetDir})_CovRna"
 
 pushd ${targetDir}
 
-controlDirs="$(ls | grep -v "activate10" | grep "E[34][0-9]") Out_*m_t1_E* Out_*m_t1_activate10_E*"
-flavopiridolDirs="$(ls | grep -v "activate10" | grep "E[34][0-9]") Out_*m_t1*flavopiridol*"
+controlDirs="Out_*m_t1_E* Out_*m_t1_activate10_E*"
+flavopiridolDirs="Out_*_m_t1_E* Out_*m_t1*flavopiridol*"
 actinomycinDDirs="$(ls | grep -v "activate10" | grep "E[34][0-9]") Out_*_m_t1_E* Out_*m_t1*actinomycin-D*"
 
 for f in ${controlDirs}; do
-	[[ -d "$f" ]] && ${analyze} -S ${controlDirs} -p ${plotBasename}_control.png
+	[[ -d "$f" ]] && ${analyze} -S ${controlDirs} -p ${plotBasename}_control.${EXT}
 	break
 done
 for f in ${flavopiridolDirs}; do
-	[[ -d "$f" ]] && ${analyze} -S ${flavopiridolDirs} -p ${plotBasename}_flavopiridol.png
+	[[ -d "$f" ]] && ${analyze} -S ${flavopiridolDirs} -p ${plotBasename}_flavopiridol.${EXT}
 	break
 done
 for f in ${actinomycinDDirs}; do
-    echo ${actinomycinDDirs}
-	[[ -d "$f" ]] && ${analyze} -S ${actinomycinDDirs} -p ${plotBasename}_actinomycin-D.png
+	[[ -d "$f" ]] && ${analyze} -S ${actinomycinDDirs} -p ${plotBasename}_actinomycin-D.${EXT}
 	break
 done
 popd
