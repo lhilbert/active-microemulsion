@@ -465,9 +465,9 @@ unsigned int Microemulsion::performChemicalReactions()
     unsigned int chemicalChangesCounter = 0;
     // Phase 1:
     // Decay "old" RNA
-    #pragma omp parallel
-    {
-        #pragma omp for reduction(+:chemicalChangesCounter) schedule(dynamic)
+//    #pragma omp parallel
+//    {
+//        #pragma omp for reduction(+:chemicalChangesCounter) schedule(dynamic)
         for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
         {
             for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
@@ -476,10 +476,10 @@ unsigned int Microemulsion::performChemicalReactions()
                 chemicalChangesCounter += performChemicalReactionsDecay(column, row);
             }
         }
-        #pragma omp barrier
+//        #pragma omp barrier
         // Phase 2:
         // Switch chromatin activity, produce RNA, transfer RNA
-        #pragma omp for reduction(+:chemicalChangesCounter) schedule(dynamic)
+//        #pragma omp for reduction(+:chemicalChangesCounter) schedule(dynamic)
         for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
         {
             for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
@@ -488,7 +488,7 @@ unsigned int Microemulsion::performChemicalReactions()
                 chemicalChangesCounter += performChemicalReactionsProductionTransfer(column, row);
             }
         }
-    }
+//    }
     return chemicalChangesCounter;
 }
 
