@@ -90,21 +90,43 @@ bool Microemulsion::performRandomSwap(int x, int y)
 
 unsigned int Microemulsion::performRandomSwaps(unsigned int rounds)
 {
+    int threads = omp_get_num_threads();
     unsigned int rVecLen = rounds/5; // This 5 is floor(pow(2^64 - 1, 1/25)), how many 25's are in a long long
+    unsigned int rVecLenLoc = static_cast<unsigned int>(ceil((rVecLen + 0.0) / threads));
+    rVecLen = rVecLenLoc * threads; // Rounding to make life easier
     unsigned long long *rVec = new unsigned long long[rVecLen];
+    
     unsigned int count = 0;
     int colour = 0;
     #pragma omp parallel
     {
-        #pragma omp for schedule(static,8)
-        for (unsigned int i = 0; i < rVecLen; ++i)
+//        #pragma omp for schedule(dynamic)
+//        for (unsigned int i = 0; i < rVecLen; ++i)
+//        {
+//            rVec[i] = randomGenerator_64();
+//        }
+        
+        #pragma omp master
         {
-            rVec[i] = randomGenerator_64();
+            for (unsigned int i = 0; i < rVecLen; ++i)
+            {
+                rVec[i] = 0;
+            }
+        }
+        #pragma omp for schedule(static,1)
+        for (int t=0; t < threads; ++t)
+        {
+            auto *rVecLoc = new unsigned long long[rVecLenLoc];
+            for (unsigned int i = 0; i < rVecLenLoc; ++i)
+            {
+                rVecLoc[i] = randomGenerator_64();
+            }
+            memcpy(rVec + (t * rVecLenLoc), rVecLoc, rVecLenLoc);
         }
         
         for (unsigned int r = 0; r < rounds; ++r)
         {
-            #pragma omp single
+            #pragma omp master
             {
 //                colour = coloursDistribution(randomGenerator);
                 unsigned int i = r / 5;
