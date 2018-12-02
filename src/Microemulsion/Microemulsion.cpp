@@ -465,22 +465,27 @@ unsigned int Microemulsion::performChemicalReactions()
     unsigned int chemicalChangesCounter = 0;
     // Phase 1:
     // Decay "old" RNA
-    for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
+    #pragma omp parallel
     {
-        for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
+        #pragma omp for reduction(+:chemicalChangesCounter) schedule(dynamic)
+        for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
         {
-            // Chemical reaction takes place on each cell of the grid.
-            chemicalChangesCounter += performChemicalReactionsDecay(column, row);
+            for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
+            {
+                // Chemical reaction takes place on each cell of the grid.
+                chemicalChangesCounter += performChemicalReactionsDecay(column, row);
+            }
         }
-    }
-    // Phase 2:
-    // Switch chromatin activity, produce RNA, transfer RNA
-    for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
-    {
-        for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
+        // Phase 2:
+        // Switch chromatin activity, produce RNA, transfer RNA
+        #pragma omp for reduction(+:chemicalChangesCounter) schedule(dynamic)
+        for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
         {
-            // Chemical reaction takes place on each cell of the grid.
-            chemicalChangesCounter += performChemicalReactionsProductionTransfer(column, row);
+            for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
+            {
+                // Chemical reaction takes place on each cell of the grid.
+                chemicalChangesCounter += performChemicalReactionsProductionTransfer(column, row);
+            }
         }
     }
     return chemicalChangesCounter;
