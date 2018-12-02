@@ -476,6 +476,7 @@ unsigned int Microemulsion::performChemicalReactions()
                 chemicalChangesCounter += performChemicalReactionsDecay(column, row);
             }
         }
+        #pragma omp barrier
         // Phase 2:
         // Switch chromatin activity, produce RNA, transfer RNA
         #pragma omp for reduction(+:chemicalChangesCounter) schedule(dynamic)
