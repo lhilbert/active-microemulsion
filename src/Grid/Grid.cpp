@@ -17,11 +17,12 @@ void Grid::allocateGrid()
     int extendedRows = rows + 2;
     int extendedColumns = columns + 2;
     data = new CellData *[extendedRows];
-    data[0] = new CellData[extendedRows * extendedColumns](); // "()" at the end ensure initialization to 0
-//    #pragma omp parallel for
+    data[0] = new CellData[extendedRows * extendedColumns]; // "()" at the end ensure initialization to 0
+    #pragma omp parallel for schedule(static) //first touch on grid
     for (int i = 1; i < extendedRows - 1; ++i)
     {
         data[i] = data[0] + i * extendedColumns;
+        memset(data[i], 0, static_cast<size_t>(extendedColumns));
     }
     data[extendedRows - 1] = data[0] + (extendedRows - 1) * extendedColumns;
 }

@@ -108,10 +108,7 @@ unsigned int Microemulsion::performRandomSwaps(unsigned int rounds)
         
         #pragma omp master
         {
-            for (unsigned int i = 0; i < rVecLen; ++i)
-            {
-                rVec[i] = 0;
-            }
+            memset(rVec, 0, rVecLen);
         }
         #pragma omp for schedule(static,1)
         for (int t=0; t < threads; ++t)
@@ -138,7 +135,8 @@ unsigned int Microemulsion::performRandomSwaps(unsigned int rounds)
             unsigned char rowColour = colour / colourStride;
             unsigned char columnColour = colour % colourStride;
 
-            #pragma omp for reduction(+:count) schedule(dynamic)
+//            #pragma omp for reduction(+:count) schedule(dynamic)
+            #pragma omp for reduction(+:count) schedule(static)
             for (int row = grid.getFirstRow() + rowColour; row < grid.getLastRow(); row += colourStride)
             {
                 for (int column = grid.getFirstColumn() + columnColour;
