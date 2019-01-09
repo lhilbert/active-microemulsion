@@ -135,8 +135,8 @@ unsigned int Microemulsion::performRandomSwaps(unsigned int rounds)
             unsigned char rowColour = colour / colourStride;
             unsigned char columnColour = colour % colourStride;
 
-//            #pragma omp for reduction(+:count) schedule(dynamic)
-            #pragma omp for reduction(+:count) schedule(static)
+            #pragma omp for reduction(+:count) schedule(dynamic)
+//            #pragma omp for reduction(+:count) schedule(static)
             for (int row = grid.getFirstRow() + rowColour; row < grid.getLastRow(); row += colourStride)
             {
                 for (int column = grid.getFirstColumn() + columnColour;

@@ -119,7 +119,8 @@ public:
         CellData &cellData = getElement(column, row);
         CellData &nCellData = getElement(nColumn, nRow);
         return (cellData.getChemicalProperties() == nCellData.getChemicalProperties())
-               && (cellData.getFlags() == nCellData.getFlags());
+               && (cellData.getFlags() == nCellData.getFlags()
+               && (cellData.getRnaContent() == nCellData.getRnaContent())); // Important: we also need to check for RNA content!
     }
     
     int getSpeciesCount(ChemicalSpecies chemicalSpecies);

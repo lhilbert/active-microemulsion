@@ -371,6 +371,8 @@ int main(int argc, const char **argv)
 //                                logger.logMsg(WARNING, "PgmWriter: SATURATION - RNA value of %d exceeds 255", rnaContent);
                                 rnaContent = 255;
                             }
+                            //TODO: check if actually we need to avoid to show TXN sites even if they have RNA, it seems
+                            //TODO[cont]: that the real data behave in an non-related way for TXN and RNA.
                             return (unsigned char) rnaContent;
                         });
     PgmWriter transcriptionWriter(logger, columns, rows, outputDir + "/microemulsion_Transcription", "Pol II Ser2Phos",
