@@ -197,6 +197,7 @@ double Microemulsion::computePartialDifferentialEnergy(int x, int y, int nx, int
     else if (dx != 0)
     {
         // Here we are trying to swap horizontally
+        //todo Check if energy computation is correct here
         for (short j = -1; j <= 1; ++j)
         {
             energy += computePairEnergy(x, y, x - dx, y + j);
@@ -206,6 +207,7 @@ double Microemulsion::computePartialDifferentialEnergy(int x, int y, int nx, int
     else if (dy != 0)
     {
         // Here we are trying to swap vertically
+        //todo Check if energy computation is correct here
         for (short i = -1; i <= 1; ++i)
         {
             energy += computePairEnergy(x, y, x + i, y - dy);

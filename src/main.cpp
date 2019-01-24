@@ -452,6 +452,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
                        double kOff, double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
                        double kRnaTransfer, double t)
 {
+    // TODO: this should be converted into using different classes for each event
     auto eventsToApply = eventSchedule.popEventsToApply(t);
     for (auto event : eventsToApply)
     {
@@ -487,7 +488,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
             logger.logEvent(PRODUCTION, t, "EVENT: Transcription spike");
             microemulsion.setKOn(1);
             microemulsion.setKOff(kOff);
-            microemulsion.setKChromPlus(1); //todo: here confirm if maybe something lower than 1 is to be preferred
+            microemulsion.setKChromPlus(kChromPlus);
             microemulsion.setKChromMinus(kChromMinus);
             microemulsion.setKRnaPlus(kRnaPlus);
             microemulsion.setKRnaMinusRbp(kRnaMinus);
