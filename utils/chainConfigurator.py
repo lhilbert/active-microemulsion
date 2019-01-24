@@ -182,6 +182,18 @@ class Configurator:
             # In this case just draw them randomly with probability
             self.chromosomeInhibitionFlags = \
                 [int(randomChoiceWithProbability(self.inhibitionProb)) for x in range(self.numChromosomes)]
+        elif self.numActiveChains == 1:
+            # Here set the center(most) chain as active
+            self.chromosomeInhibitionFlags = int(self.numChromosomes / 2)*[1] + [0] + int(self.numChromosomes / 2)*[1]
+            # Pop one element if the initial size was even and we have added one flag too much
+            if (len(self.chromosomeInhibitionFlags) > self.numChromosomes):
+                self.chromosomeInhibitionFlags.pop()
+        elif self.numActiveChains == self.numChromosomes - 1:
+            # Here set the center(most) chain as inactive
+            self.chromosomeInhibitionFlags = int(self.numChromosomes / 2)*[0] + [1] + int(self.numChromosomes / 2)*[0]
+            # Pop one element if the initial size was even and we have added one flag too much
+            if (len(self.chromosomeInhibitionFlags) > self.numChromosomes):
+                self.chromosomeInhibitionFlags.pop()
         else:
             numInhibitedChains = self.numChromosomes - self.numActiveChains
             self.chromosomeInhibitionFlags = [1] * numInhibitedChains + [0] * self.numActiveChains
@@ -230,7 +242,7 @@ if __name__ == "__main__":
     parser.add_argument("-I", "--inhibition-probability",
                         help="The probability of chromatin chains to be set as inhibited",
                         dest="inhibitionProbability", type=float, default=0.5)
-    parser.add_argument("-1", "--one-active-chain", help="Set just one chain as non-inhibited (overrides the -I flag)",
+    parser.add_argument("-1", "--one-active-chain", help="Set just one chain as non-inhibited (overrides the -I flag, chain is nearest to center)",
                         dest="oneActiveChain", action="store_true")
     parser.add_argument("--one-inhibited-chain", help="Set just one chain as inhibited (overrides the -I flag)",
                         dest="oneInhibitedChain",action="store_true")
