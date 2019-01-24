@@ -66,7 +66,7 @@ plotter = Plotter(analysis.getXData(), plotFileName=args.plotFileName,
                   xlabel="Transcription Intensity", ylabel="RNA Intensity",
                   interactive=(not args.scriptMode),
                   scatterPlotMode=(not not args.scatterPlot),
-                  xlim=(0,60))#, ylim=(0,200))
+                  xlim=(0,60), ylim=(0, 8))
 
 if args.flavopiridol > 0:
     eventTime = args.flavopiridol

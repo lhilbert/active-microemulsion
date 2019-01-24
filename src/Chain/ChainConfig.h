@@ -21,7 +21,7 @@ typedef struct Displacement
 #include <map>
 #include <vector>
 #include <sstream>
-#include "Logger.h"
+#include "../Logger/Logger.h"
 
 class ChainConfig
 {

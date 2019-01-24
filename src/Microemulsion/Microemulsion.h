@@ -5,20 +5,28 @@
 #ifndef ACTIVE_MICROEMULSION_MICROEMULSION_H
 #define ACTIVE_MICROEMULSION_MICROEMULSION_H
 
-#include "Grid.h"
-#include "Logger.h"
+#include "../Grid/Grid.h"
+#include "../Logger/Logger.h"
 #include <cmath>
 #include <functional>
 #include <random>
+#include "../Utils/RandomGenerator.h"
 
 class Microemulsion
 {
+public:
+    static const int colourStride = 5;
+    
 private:
     Grid &grid;
     Logger &logger;
     double omega, deltaEmin;
-    std::mt19937_64 randomGenerator;
+    static pcg32 randomGenerator;
+    #pragma omp threadprivate(randomGenerator)
+    static pcg64 randomGenerator_64;
+    #pragma omp threadprivate(randomGenerator_64)
     std::uniform_real_distribution<double> uniformProbabilityDistribution;
+    std::uniform_int_distribution<int> coloursDistribution;
     double dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinusRbp, kRnaMinusTxn, kRnaTransfer;
     bool isBoundarySticky;
 
@@ -53,10 +61,10 @@ public:
     
     /**
      * Attempts the given amount of swaps and returns how many actually done.
-     * @param amount The number of swaps to attempt.
+     * @param rounds The number of swaps to attempt.
      * @return The number of swaps successfully performed.
      */
-    unsigned int performRandomSwaps(unsigned int amount);
+    unsigned int performRandomSwaps(unsigned int rounds);
     
     /**
      * Perform the chemical reactions on the entire grid.
@@ -138,6 +146,8 @@ private:
     RnaCounter performRnaTransferReaction(int column, int row, double transferRate);
     
     bool performTranscribabilitySwitchingReaction(CellData &cellData, double reactionRatePlus, double reactionRateMinus);
+    
+    bool performRandomSwap(int x, int y);
 };
 
 

@@ -1,11 +1,13 @@
 #include <iostream>
-#include "Logger.h"
-#include "Grid.h"
-#include "Microemulsion.h"
-#include "PgmWriter.h"
-#include "ChainConfig.h"
-#include "EventSchedule.h"
-#include "EventSchedule.cpp" // Since template implementation is here
+#include "Logger/Logger.h"
+#include "Grid/Grid.h"
+#include "Microemulsion/Microemulsion.h"
+#include "Visualization/PgmWriter.h"
+#include "Chain/ChainConfig.h"
+#include "EventSchedule/EventSchedule.h"
+#include "EventSchedule/EventSchedule.cpp" // Since template implementation is here
+#include "Grid/GridInitializer.h"
+#include "Cell/CellData.h"
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
@@ -27,6 +29,8 @@ int main(int argc, const char **argv)
     double cutoffTime = -1;
     double cutoffTimeFraction = 1;
     int rows = 50, columns = 50;
+    int numThreads = 1;
+    unsigned int swapRounds = 0;
     int swapsPerPixelPerUnitTime = 500;
     int numVisualizationOutputs = 100; //todo read this from config
     double snapshotInterval = -1;
@@ -49,6 +53,7 @@ int main(int argc, const char **argv)
             ("debug,d", "Enable the debug logging level")
             ("coarse-debug", "Enable the coarse_debug logging level")
             ("quiet,q", "Restrict logging to PRODUCTION,WARNING,ERROR levels")
+            ("Quiet,Q", "Restrict logging to WARNING,ERROR levels")
             ("minutes,m", "Time variables are expressed in minutes instead of seconds")
             ("no-chain-integrity", "Do not enforce chain integrity")
             ("no-sticky-boundary", "Do not make boundary sticky to chromatin")
@@ -87,21 +92,23 @@ int main(int argc, const char **argv)
 //            ("all-extra-snapshots", "Enables the extra snapshot for all events (it is enabled only for last one by default)")
             ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
             ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
-            ("omega,w", opt::value<double>(&omega)->default_value(0.5),
+            ("threads", opt::value<int>(&numThreads)->default_value(-1),
+             "Number of threads to use for parallelization. A negative value lets OMP_NUM_THREADS take precedence")
+            ("omega,w", opt::value<double>(&omega)->default_value(0.25),
              "Energy cost for contiguity of non-affine species (omega model parameter)")
-            ("sppps,s", opt::value<int>(&swapsPerPixelPerUnitTime)->default_value(333),
+            ("sppps,s", opt::value<int>(&swapsPerPixelPerUnitTime)->default_value(3000),
              "Number of average swap attempts per pixel per second")
             ("kOn", opt::value<double>(&kOn)->default_value(1.25e-3),
              "Reaction rate - Chromatin from non-transcribable to transcribable state")
             ("kOff", opt::value<double>(&kOff)->default_value(2.5e-3),
              "Reaction rate - Chromatin from transcribable to non-transcribable state")
-            ("kChromPlus", opt::value<double>(&kChromPlus)->default_value(6.666666666e-3),
+            ("kChromPlus", opt::value<double>(&kChromPlus)->default_value(4.4444e-3),
              "Reaction rate - Transcription turned ON")
-            ("kChromMinus", opt::value<double>(&kChromMinus)->default_value(1.666666666e-3),
+            ("kChromMinus", opt::value<double>(&kChromMinus)->default_value(1.1111e-3),
              "Reaction rate - Transcription turned OFF")
-            ("kRnaPlus", opt::value<double>(&kRnaPlus)->default_value(8.333333333e-3),
+            ("kRnaPlus", opt::value<double>(&kRnaPlus)->default_value(4.16666e-2),
              "Reaction rate - RBP from free to bound state")
-            ("kRnaMinusRbp", opt::value<double>(&kRnaMinus)->default_value(8.333333333e-4),
+            ("kRnaMinusRbp", opt::value<double>(&kRnaMinus)->default_value(4.16666e-4),
              "Reaction rate - RBP from bound to free state")
             ("kRnaTransfer", opt::value<double>(&kRnaTransfer)->default_value(1.666666666e-2),
              "Reaction rate - RNA migrating from transcription site to an RBP site");
@@ -114,15 +121,20 @@ int main(int argc, const char **argv)
         std::cout << argsDescription << std::endl;
         return 1;
     }
-
-//    // debug
-//    std::cout << flavopiridolEvents.size() << std::endl;
-//    return 1;
-//    //
+    
+    if (numThreads < 0)
+    {
+        numThreads = omp_get_num_threads();
+    }
+    else
+    {
+        omp_set_num_threads(numThreads);
+    }
     
     bool debugMode = varsMap.count("debug") > 0;
     bool coarseDebugMode = varsMap.count("coarse-debug") > 0;
     bool quietMode = varsMap.count("quiet") > 0;
+    bool QuietMode = varsMap.count("Quiet") > 0;
     bool enforceChainIntegrity = varsMap.count("no-chain-integrity") == 0;
     bool stickyBoundary = varsMap.count("no-sticky-boundary") == 0;
     bool flavopiridolSwitchPassed = varsMap.count("flavopiridol") > 0;
@@ -143,9 +155,8 @@ int main(int argc, const char **argv)
     extraSnapshotTimeOffset *= timeMultiplier;
     extraSnapshotTimeAbs *= timeMultiplier;
     cutoffTime *= timeMultiplier;
-    //
-    int numInnerCells = rows * columns;
-    double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
+    
+    // Start timers computation
     kSet.insert(kOn);
     kSet.insert(kOff);
     kSet.insert(kChromPlus);
@@ -154,8 +165,9 @@ int main(int argc, const char **argv)
     kSet.insert(kRnaMinus);
     kSet.insert(kRnaTransfer);
     kMax = *kSet.rbegin(); // Get the maximum on the set
+    //dtChem
     double dtChem = 0.1 / kMax;
-
+    //snapshotInterval
     if (snapshotInterval <= 0) // Auto-compute it only if it was not set
     {
         snapshotInterval =
@@ -165,6 +177,22 @@ int main(int argc, const char **argv)
     {
         numVisualizationOutputs = static_cast<int>(floor(endTime / snapshotInterval));
     }
+    //dt
+    int numInnerCells = rows * columns;
+//    double dt = 1.0 / (double) (swapsPerPixelPerUnitTime * numInnerCells); // The dt used for timestepping.
+    int cellsPerColour = numInnerCells / (Microemulsion::colourStride * Microemulsion::colourStride);
+    
+    // Compute swaps round if required
+    double alpha = (double) (swapsPerPixelPerUnitTime * Microemulsion::colourStride * Microemulsion::colourStride);
+    if (swapRounds == 0)
+    {
+        int safetyFactor = 3;
+        double k = fmin(dtChem, snapshotInterval);
+        swapRounds = static_cast<unsigned int>(ceil(k * alpha / safetyFactor));
+    }
+    double dt = swapRounds * 1.0 / alpha; // The dt used for timestepping.
+    //
+    
     if (cutoffTime < 0)
     {
         cutoffTime = endTime / cutoffTimeFraction;
@@ -239,6 +267,10 @@ int main(int argc, const char **argv)
     {
         logger.setDebugLevel(PRODUCTION);
     }
+    else if (QuietMode)
+    {
+        logger.setDebugLevel(WARNING);
+    }
     logger.openLogFile();
     logger.setStartTime();
     logger.logArgv(argc, argv); // Logging invocation command.
@@ -247,6 +279,7 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(debugMode));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(coarseDebugMode));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(quietMode));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(QuietMode));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(enforceChainIntegrity));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(stickyBoundary));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(isTimeInMinutes));
@@ -273,6 +306,8 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%f", DUMP(kMax));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numVisualizationOutputs));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(extraSnapshotTimeOffset));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numThreads));
+    logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(swapRounds));
     
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dt));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtChem));
@@ -286,7 +321,7 @@ int main(int argc, const char **argv)
     logger.logMsg(PRODUCTION, "Reading polymeric chains configuration");
     std::set<ChainId> allChains, cutoffChains;
     Grid grid(columns, rows, logger);
-    grid.initializeInnerGridAs(Grid::chemicalPropertiesOf(RBP, NOT_ACTIVE));
+    GridInitializer::initializeInnerGridAs(grid, CellData::chemicalPropertiesOf(RBP, NOT_ACTIVE));
     // ...and read chains configuration
     ChainConfig chainConfig(logger);
     std::ifstream chainConfigFile(inputChainsFile);
@@ -294,12 +329,13 @@ int main(int argc, const char **argv)
     {
         const std::map<std::string, unsigned char> &chainProperties = chainConfig.getChainProperties();
         int column = chainConfig.getStartCol(), row = chainConfig.getStartRow();
-        ChemicalProperties chemicalProperties = Grid::chemicalPropertiesOf(CHROMATIN,
-                                                                           static_cast<Activity>(chainConfig.isActive()));
-        Flags flags = Grid::flagsOf(static_cast<Transcribability>(chainConfig.isTranscribable()),
-                                    static_cast<TranscriptionInhibition>(!chainConfig.isInhibited()));
-        auto newChain = grid.initializeGridWithStepInstructions(allChains, column, row, chainConfig.getSteps(),
-                                                                chemicalProperties, flags);
+        ChemicalProperties chemicalProperties = CellData::chemicalPropertiesOf(CHROMATIN,
+                                                                               static_cast<Activity>(chainConfig.isActive()));
+        Flags flags = CellData::flagsOf(static_cast<Transcribability>(chainConfig.isTranscribable()),
+                                        static_cast<TranscriptionInhibition>(!chainConfig.isInhibited()));
+        auto newChain = GridInitializer::initializeGridWithStepInstructions(grid, allChains, column, row,
+                                                                            chainConfig.getSteps(),
+                                                                            chemicalProperties, flags);
         
         auto pos = chainProperties.find("Cutoff");
         if (pos != chainProperties.end() && pos->second != 0)
@@ -325,7 +361,7 @@ int main(int argc, const char **argv)
     // Initialize PgmWriters for the 3 channels
     PgmWriter dnaWriter(logger, columns, rows, outputDir + "/microemulsion_DNA", "DNA",
                         [](const CellData &cellData) -> unsigned char {
-                            return (unsigned char) 255 * Grid::isChromatin(cellData.chemicalProperties);
+                            return (unsigned char) 255 * CellData::isChromatin(cellData.chemicalProperties);
                         });
     PgmWriter rnaWriter(logger, columns, rows, outputDir + "/microemulsion_RNA", "RNA",
                         [](const CellData &cellData) -> unsigned char {
@@ -335,11 +371,14 @@ int main(int argc, const char **argv)
 //                                logger.logMsg(WARNING, "PgmWriter: SATURATION - RNA value of %d exceeds 255", rnaContent);
                                 rnaContent = 255;
                             }
+                            //TODO: check if actually we need to avoid to show TXN sites even if they have RNA, it seems
+                            //TODO[cont]: that the real data behave in an non-related way for TXN and RNA.
                             return (unsigned char) rnaContent;
                         });
     PgmWriter transcriptionWriter(logger, columns, rows, outputDir + "/microemulsion_Transcription", "Pol II Ser2Phos",
                                   [](const CellData &cellData) -> unsigned char {
-                                      return (unsigned char) 255 * Grid::isActiveChromatin(cellData.chemicalProperties);
+                                      return (unsigned char) 255 *
+                                             CellData::isActiveChromatin(cellData.chemicalProperties);
                                   });
     dnaWriter.setData(grid.getData());
     rnaWriter.setData(grid.getData());
@@ -375,8 +414,10 @@ int main(int argc, const char **argv)
         while (t < nextOutputTime)
         {
             t += dt;
-            swapsPerformed += microemulsion.performRandomSwap();
-            ++swapAttempts;
+//            swapsPerformed += microemulsion.performRandomSwap();
+//            ++swapAttempts;
+            swapsPerformed += microemulsion.performRandomSwaps(swapRounds);
+            swapAttempts += cellsPerColour * swapRounds;
             
             // Now check if to perform chemical reactions
             if (t >= nextChemTime)
@@ -411,6 +452,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
                        double kOff, double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
                        double kRnaTransfer, double t)
 {
+    // TODO: this should be converted into using different classes for each event
     auto eventsToApply = eventSchedule.popEventsToApply(t);
     for (auto event : eventsToApply)
     {
@@ -446,7 +488,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
             logger.logEvent(PRODUCTION, t, "EVENT: Transcription spike");
             microemulsion.setKOn(1);
             microemulsion.setKOff(kOff);
-            microemulsion.setKChromPlus(1); //todo: here confirm if maybe something lower than 1 is to be preferred
+            microemulsion.setKChromPlus(kChromPlus);
             microemulsion.setKChromMinus(kChromMinus);
             microemulsion.setKRnaPlus(kRnaPlus);
             microemulsion.setKRnaMinusRbp(kRnaMinus);

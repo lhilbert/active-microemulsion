@@ -6,7 +6,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <stdexcept>
-#include "Timing.h"
+#include "../Timing/Timing.h"
 #include "Logger.h"
 
 static const char *DEBUG_STR[] = {

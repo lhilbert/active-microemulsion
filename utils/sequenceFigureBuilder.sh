@@ -31,8 +31,9 @@ echo "Image size: ${WIDTH}x${HEIGHT}"
 #FIGURE_SEQ=( 0 11 22 33 56 78 100 ) # For cutoff @1/3
 #FIGURE_SEQ=( 0 1 25 100 ) # For simple phase separation simulations
 
-FIGURE_SEQ=( 1 10 20 30 40 50 60 70 80 )
+#FIGURE_SEQ=( 1 10 20 30 40 50 60 70 80 )
 #FIGURE_SEQ=( 1 5 10 15 20 25 30 )
+FIGURE_SEQ=( 1 25 50 80 )
 
 BLUR_PARAMS="0x0.5" # This should be tuned carefully
 

@@ -7,7 +7,8 @@ BUILD_TYPE="Debug"
 
 SRC_DIR="$(pwd)"
 BUILD_DIR="${SRC_DIR}/cmake-build-${CC}"
-TARGET="active-microemulsion"
+#TARGET="active-microemulsion"
+TARGET="tests"
 
 mkdir -p ${BUILD_DIR}
 pushd ${BUILD_DIR}
