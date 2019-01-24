@@ -24,21 +24,18 @@ csvBasename=$(basename ${targetDir})
 
 pushd ${targetDir}
 
-controlDirs="Out_*m_t1_E* Out_*m_t1_activate10_E*"
-flavopiridolDirs="Out_*_m_t1_E* Out_*m_t1*flavopiridol*"
+controlDirs="Out_*m_t1_E[0-9]_* Out_*m_t1_E10_* Out_*m_t1*_activate10_E* Out_*m_t1*_activate1099_E*"
+flavopiridolDirs="Out_*m_t1_E[0-9]_* Out_*m_t1_E10_* Out_*m_t1*flavopiridol*"
 actinomycinDDirs="$(ls | grep -v "activate10" | grep "E[34][0-9]") Out_*_m_t1_E* Out_*m_t1*actinomycin-D*"
 
 for f in ${controlDirs}; do
-	[[ -d "$f" ]] && ${analyze} -S ${controlDirs} -d ${csvBasename}_control.csv && sed -i s/"SnapshotNumber,X,Y,Z"/"SnapshotNumber,TXN,RNA,CoV(DNA)"/ ${csvBasename}_control.csv
-	break
+	[[ -d "$f" ]] && ${analyze} -S ${controlDirs} -d ${csvBasename}_control.csv && sed -i s/"SnapshotNumber,X,Y,Z"/"SnapshotNumber,TXN,RNA,CoV(DNA)"/ ${csvBasename}_control.csv && break
 done
 for f in ${flavopiridolDirs}; do
-	[[ -d "$f" ]] && ${analyze} -S ${flavopiridolDirs} -d ${csvBasename}_flavopiridol.csv && sed -i s/"SnapshotNumber,X,Y,Z"/"SnapshotNumber,TXN,RNA,CoV(DNA)"/ ${csvBasename}_flavopiridol.csv
-	break
+	[[ -d "$f" ]] && ${analyze} -S ${flavopiridolDirs} -d ${csvBasename}_flavopiridol.csv && sed -i s/"SnapshotNumber,X,Y,Z"/"SnapshotNumber,TXN,RNA,CoV(DNA)"/ ${csvBasename}_flavopiridol.csv && break
 done
 for f in ${actinomycinDDirs}; do
-	[[ -d "$f" ]] && ${analyze} -S ${actinomycinDDirs} -d ${csvBasename}_actinomycin-D.csv && sed -i s/"SnapshotNumber,X,Y,Z"/"SnapshotNumber,TXN,RNA,CoV(DNA)"/ ${csvBasename}_actinomycin-D.csv
-	break
+	[[ -d "$f" ]] && ${analyze} -S ${actinomycinDDirs} -d ${csvBasename}_actinomycin-D.csv && sed -i s/"SnapshotNumber,X,Y,Z"/"SnapshotNumber,TXN,RNA,CoV(DNA)"/ ${csvBasename}_actinomycin-D.csv && break
 done
 popd
 

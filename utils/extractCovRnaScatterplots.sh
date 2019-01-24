@@ -27,21 +27,19 @@ plotBasename="$(basename ${targetDir})_CovRna"
 
 pushd ${targetDir}
 
-controlDirs="Out_*m_t1_E* Out_*m_t1_activate10_E*"
-flavopiridolDirs="Out_*_m_t1_E* Out_*m_t1*flavopiridol*"
+controlDirs="Out_*m_t1_E[0-9]_* Out_*m_t1_E10_* Out_*m_t1*_activate10_E* Out_*m_t1*_activate1099_E*"
+flavopiridolDirs="Out_*m_t1_E[0-9]_* Out_*m_t1_E10_* Out_*m_t1*flavopiridol*"
 actinomycinDDirs="$(ls | grep -v "activate10" | grep "E[34][0-9]") Out_*_m_t1_E* Out_*m_t1*actinomycin-D*"
 
 for f in ${controlDirs}; do
-	[[ -d "$f" ]] && ${analyze} -S ${controlDirs} -p ${plotBasename}_control.${EXT}
-	break
+	[[ -d "$f" ]] && ${analyze} -S ${controlDirs} -p ${plotBasename}_control.${EXT} && break
 done
 for f in ${flavopiridolDirs}; do
-	[[ -d "$f" ]] && ${analyze} -S ${flavopiridolDirs} -p ${plotBasename}_flavopiridol.${EXT}
-	break
+#    echo Testing ${f} #debug
+	[[ -d "$f" ]] && ${analyze} -S ${flavopiridolDirs} -p ${plotBasename}_flavopiridol.${EXT} && break
 done
 for f in ${actinomycinDDirs}; do
-	[[ -d "$f" ]] && ${analyze} -S ${actinomycinDDirs} -p ${plotBasename}_actinomycin-D.${EXT}
-	break
+	[[ -d "$f" ]] && ${analyze} -S ${actinomycinDDirs} -p ${plotBasename}_actinomycin-D.${EXT} && break
 done
 popd
 
