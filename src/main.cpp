@@ -467,7 +467,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
             microemulsion.setKChromPlus(0);
             microemulsion.setKChromMinus(0);
             microemulsion.setKRnaPlus(0);
-            microemulsion.setKRnaMinusTxn(0); // RNA should not decay on TXN sites
+            microemulsion.setKRnaMinusTxn(kRnaMinus);
             microemulsion.setKRnaTransfer(0); // RNA should not be transferred from TXN sites to RBP
         }
         else if (event == ACTIVATE)
@@ -479,7 +479,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
             microemulsion.setKChromMinus(kChromMinus);
             microemulsion.setKRnaPlus(kRnaPlus);
             microemulsion.setKRnaMinusRbp(kRnaMinus);
-            microemulsion.setKRnaMinusTxn(kRnaMinus);
+            microemulsion.setKRnaMinusTxn(0);
             microemulsion.setKRnaTransfer(kRnaTransfer);
         }
         else if (event == TXN_SPIKE)
@@ -492,7 +492,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
             microemulsion.setKChromMinus(kChromMinus);
             microemulsion.setKRnaPlus(kRnaPlus);
             microemulsion.setKRnaMinusRbp(kRnaMinus);
-            microemulsion.setKRnaMinusTxn(kRnaMinus);
+            microemulsion.setKRnaMinusTxn(0);
             microemulsion.setKRnaTransfer(kRnaTransfer);
         }
         else
