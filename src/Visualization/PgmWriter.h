@@ -38,17 +38,18 @@ public:
     ~PgmWriter();
     // Data pointer should usually be done just once.
     void setData(const CellData **newData);
-    // Write data to pgm file (logging without simulation time)
-    void write(bool isExtraSnapshot=false);
-    // Write data to pgm file (logging with simulation time)
+    // Write data to pgm file
     void write(double t, bool isExtraSnapshot=false);
     // Series should be advanced after write, if necessary
     void advanceSeries();
     unsigned int getCounter();
-    const char * getOutputFileFullNameCstring();
+    const char *getOutputFileFullNameCstring(double t);
+    
+    const std::string setOutputFileFullName(double t);
+
 private:
     // Actual writing process, without logging
-    void __write(bool isExtraSnapshot=false);
+    void __write(double t, bool isExtraSnapshot=false);
 };
 
 

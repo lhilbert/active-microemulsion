@@ -5,6 +5,8 @@
 #include "PgmWriter.h"
 #include <cstring>
 #include <string>
+#include <sstream>
+#include <iomanip>
 
 PgmWriter::PgmWriter(Logger &logger, int W, int H, std::string outputFile, std::string channelName,
                      unsigned char (*signalConverter)(const CellData &cellData))
@@ -25,26 +27,10 @@ void PgmWriter::setData(const CellData **newData)
     data = newData;
 }
 
-void PgmWriter::write(bool isExtraSnapshot)
-{
-    std::string pgmId = std::to_string(getCounter());
-    const char *writtenFname = getOutputFileFullNameCstring();
-    if (isExtraSnapshot)
-    {
-        pgmId = "EXTRA";
-        writtenFname = outputFileFullNameExtra.data();
-    }
-    logger.logMsg(PRODUCTION, "Writing PGM file #%s, channel %s (%s)",
-                  pgmId.data(),
-                  channelName.data(),
-                  writtenFname);
-    __write(isExtraSnapshot);
-}
-
 void PgmWriter::write(double t, bool isExtraSnapshot)
 {
     std::string pgmId = std::to_string(getCounter());
-    const char *writtenFname = getOutputFileFullNameCstring();
+    const char *writtenFname = getOutputFileFullNameCstring(t);
     if (isExtraSnapshot)
     {
         pgmId = "EXTRA";
@@ -54,7 +40,7 @@ void PgmWriter::write(double t, bool isExtraSnapshot)
                     pgmId.data(),
                     channelName.data(),
                     writtenFname);
-    __write(isExtraSnapshot);
+    __write(t, isExtraSnapshot);
 }
 
 void PgmWriter::advanceSeries()
@@ -63,7 +49,6 @@ void PgmWriter::advanceSeries()
     {
         ++counter; // If we just initialized the class, there is no need to increment counter!
     }
-    outputFileFullName = outputFileName + "_" + std::to_string(counter) + ".pgm";
 }
 
 PgmWriter::~PgmWriter()
@@ -76,12 +61,21 @@ unsigned int PgmWriter::getCounter()
     return counter;
 }
 
-const char *PgmWriter::getOutputFileFullNameCstring()
+const std::string PgmWriter::setOutputFileFullName(double t)
 {
+    std::stringstream tStream;
+    tStream << std::fixed << std::setprecision(2) << t;
+    outputFileFullName = outputFileName + "_" + std::to_string(counter) + "_" + tStream.str() + ".pgm";
+    return outputFileFullName;
+}
+
+const char *PgmWriter::getOutputFileFullNameCstring(double t)
+{
+    setOutputFileFullName(t);
     return outputFileFullName.data();
 }
 
-void PgmWriter::__write(bool isExtraSnapshot)
+void PgmWriter::__write(double t, bool isExtraSnapshot)
 {
     if (isExtraSnapshot)
     {
@@ -89,7 +83,7 @@ void PgmWriter::__write(bool isExtraSnapshot)
     }
     else
     {
-        pgm = std::fopen(outputFileFullName.data(), "wb");
+        pgm = std::fopen(getOutputFileFullNameCstring(t), "wb");
     }
     fprintf(pgm, "P2\n");
     fprintf(pgm, "# Channel: %s\n", channelName.data());

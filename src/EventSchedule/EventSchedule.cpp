@@ -11,6 +11,16 @@ void EventSchedule<EventType>::addEvent(double time, EventType eventType, double
     nextEventTime = schedule.begin()->first;
 }
 
+template<typename EventType>
+void EventSchedule<EventType>::addEvents(double startTime, double endTime, double timeStep, EventType eventType,
+                                         double timeMultiplier)
+{
+    for (double t = startTime; t <= endTime; t += timeStep)
+    {
+        addEvent(t, eventType, timeMultiplier);
+    }
+}
+
 template <typename EventType>
 void EventSchedule<EventType>::addEvents(std::vector<double> times, EventType eventType, double timeMultiplier)
 {
@@ -78,3 +88,8 @@ double EventSchedule<EventType>::getLastEventTime()
     return schedule.rbegin()->first;
 }
 
+template<typename EventType>
+double EventSchedule<EventType>::getNextEventTime() const
+{
+    return nextEventTime;
+}

@@ -20,7 +20,8 @@ typedef enum CutoffEvent
 
 typedef enum SnapshotEvent
 {
-    GENERIC_SNAPSHOT,
+    NORMAL_SNAPSHOT,
+    GENERIC_EXTRA_SNAPSHOT,
     ACTIVATE_SNAPSHOT,
     FLAVOPIRIDOL_SNAPSHOT,
     ACTINOMYCIN_D_SNAPSHOT,
@@ -42,7 +43,12 @@ public:
     
     void addEvent(double time, EventType eventType, double timeMultiplier=1);
     
+    void addEvents(double startTime, double endTime, double timeStep, EventType eventType,
+                       double timeMultiplier = 1);
+    
     void addEvents(std::vector<double> times, EventType eventType, double timeMultiplier=1);
+    
+    double getNextEventTime() const;
     
     bool check(double t);
     
