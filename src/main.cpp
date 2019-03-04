@@ -16,7 +16,7 @@ namespace opt = boost::program_options;
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
                        const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kOn,
                        double kOff, double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
-                       double kRnaTransfer, double t);
+                       double kRnaTransfer, double txnSpikeFactor, double t);
 
 void takeSnapshots(Logger &logger, PgmWriter &dnaWriter, PgmWriter &rnaWriter, PgmWriter &transcriptionWriter, double t,
                    unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed,
@@ -33,6 +33,7 @@ int main(int argc, const char **argv)
     unsigned int swapRounds = 0;
     int swapsPerPixelPerUnitTime = 500;
     int numVisualizationOutputs = 100; //todo read this from config
+    double txnSpikeFactor = 100;
     double snapshotInterval = -1;
     double extraSnapshotTimeOffset = -1;
     double extraSnapshotTimeAbs = -1;
@@ -70,6 +71,8 @@ int main(int argc, const char **argv)
             ("txn-spike",
              opt::value<std::vector<double>>(&txnSpikeEvents)->multitoken()->zero_tokens()->composing(),
              "Set a transcription spike at cutoff time. Cutoff time(s) can be specified as parameter")
+            ("txn-spike-factor", opt::value<double>(&txnSpikeFactor)->default_value(100),
+             "Factor to apply to kOn for the txnSpike")
             ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
              "Specify the folder to use for output (log and data)")
             ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
@@ -419,7 +422,7 @@ int main(int argc, const char **argv)
             applyCutoffEvents(logger, cutoffSchedule, microemulsion,
                               allChains, cutoffChains, kOn, kOff,
                               kChromPlus, kChromMinus, kRnaPlus, kRnaMinus,
-                              kRnaTransfer,
+                              kRnaTransfer, txnSpikeFactor,
                               t);
         }
         // Time-stepping loop
@@ -459,7 +462,7 @@ int main(int argc, const char **argv)
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
                        const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kOn,
                        double kOff, double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
-                       double kRnaTransfer, double t)
+                       double kRnaTransfer, double txnSpikeFactor, double t)
 {
     // TODO: we should be using the command pattern for all events...
     auto eventsToApply = eventSchedule.popEventsToApply(t);
@@ -495,7 +498,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
         {
             // Obviously transcription spike includes activation
             logger.logEvent(PRODUCTION, t, "EVENT: Transcription spike");
-            microemulsion.setKOn(1);
+            microemulsion.setKOn(txnSpikeFactor*kOn);
             microemulsion.setKOff(kOff);
             microemulsion.setKChromPlus(kChromPlus);
             microemulsion.setKChromMinus(kChromMinus);
