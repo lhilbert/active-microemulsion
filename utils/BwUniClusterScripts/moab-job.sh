@@ -26,7 +26,8 @@ flagsToNameFilter()
     | sed s,"_[a-zA-Z] [^ ]\+/[^ ]\+","",g \
     | sed s/" "/""/g \
     | sed s/"_\(flavopiridol\|actinomycin-D\|activate\)0_"/"_"/g \
-    | sed s/"-threads[0-9]\+_"/""/ 
+    | sed s/"-threads[0-9]\+_"/""/ \
+    | sed s/"_additional-snapshots[0-9]\+_"/"_"/
 }
 
 # Extract the chain config used, if any was passed
@@ -51,8 +52,10 @@ CHAIN_GEN_I="0.4"
 CHAIN_GEN_n=""
 CHAIN_GEN_s=""
 
+# Capture the raw input args
+RAW_CMDLINE="$@"
 # Log input args
-echo Input args: $@
+echo Input args: ${RAW_CMDLINE}
 
 # Parse and extract special command line arguments not to be passed downstream -- Thanks https://stackoverflow.com/a/14203146 !!! :)
 POSITIONAL=()
@@ -157,6 +160,7 @@ mkdir -p ${OUT_DIR}
 echo "Timestamp: ${timestamp}" | tee -a ${OUT_DIR}/metadata.txt
 echo "Hostname: $(hostname)" | tee -a ${OUT_DIR}/metadata.txt
 echo "CWD: $(pwd)" | tee -a ${OUT_DIR}/metadata.txt
+echo "CMD: ${RAW_CMDLINE}" | tee -a ${OUT_DIR}/metadata.txt
 
 # if needed load modules here
 #module load <module_name>
