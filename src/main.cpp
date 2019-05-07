@@ -16,7 +16,7 @@ namespace opt = boost::program_options;
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
                        const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kOn,
                        double kOff, double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
-                       double kRnaTransfer, double t);
+                       double kRnaTransfer, double txnSpikeFactor, double t);
 
 void takeSnapshots(Logger &logger, PgmWriter &dnaWriter, PgmWriter &rnaWriter, PgmWriter &transcriptionWriter, double t,
                    unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed,
@@ -33,6 +33,7 @@ int main(int argc, const char **argv)
     unsigned int swapRounds = 0;
     int swapsPerPixelPerUnitTime = 500;
     int numVisualizationOutputs = 100; //todo read this from config
+    double txnSpikeFactor = 100;
     double snapshotInterval = -1;
     double extraSnapshotTimeOffset = -1;
     double extraSnapshotTimeAbs = -1;
@@ -44,6 +45,7 @@ int main(int argc, const char **argv)
     std::vector<double> actinomycinDEvents;
     std::vector<double> activationEvents;
     std::vector<double> txnSpikeEvents;
+    std::vector<double> additionalExplicitSnapshots;
     
     // Command-line argument parser. We use Boost Program Options (https://www.boost.org/doc/libs/1_68_0/doc/html/program_options.html).
     opt::options_description argsDescription("Supported options");
@@ -69,6 +71,8 @@ int main(int argc, const char **argv)
             ("txn-spike",
              opt::value<std::vector<double>>(&txnSpikeEvents)->multitoken()->zero_tokens()->composing(),
              "Set a transcription spike at cutoff time. Cutoff time(s) can be specified as parameter")
+            ("txn-spike-factor", opt::value<double>(&txnSpikeFactor)->default_value(100),
+             "Factor to apply to kOn for the txnSpike")
             ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
              "Specify the folder to use for output (log and data)")
             ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
@@ -90,6 +94,9 @@ int main(int argc, const char **argv)
             ("extra-snapshot-abs,E", opt::value<double>(&extraSnapshotTimeAbs)->default_value(-1),
              "Time (in seconds) when the extra snapshot should be taken. A negative time disables this setting. This overrides -e.")
 //            ("all-extra-snapshots", "Enables the extra snapshot for all events (it is enabled only for last one by default)")
+            ("additional-snapshots",
+             opt::value<std::vector<double>>(&additionalExplicitSnapshots)->multitoken()->zero_tokens()->composing(),
+             "Explicitly add additional snapshot time(s). Snapshot time(s) can be specified as parameter (space-separated)")
             ("width,W", opt::value<int>(&columns)->default_value(50), "Width of the simulation grid")
             ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
             ("threads", opt::value<int>(&numThreads)->default_value(-1),
@@ -144,6 +151,7 @@ int main(int argc, const char **argv)
     bool isTimeInMinutes = varsMap.count("minutes") > 0;
 //    bool allExtraSnapshots = varsMap.count("all-extra-snapshots") > 0;
     bool allExtraSnapshots = false;
+    bool additionalSnapshotsPassed = varsMap.count("additional-snapshots") > 0;
     //
     double timeMultiplier = 1;
     if (isTimeInMinutes)
@@ -225,11 +233,19 @@ int main(int argc, const char **argv)
 //        cutoffSchedule.addEvents(reactivationEvents, ACTIVATE, timeMultiplier);
     }
     
-    // Populate the extra snapshots' schedule
-    EventSchedule<SnapshotEvent> extraSnapshotSchedule(cutoffTime);
+    // Populate the snapshots' schedule
+    EventSchedule<SnapshotEvent> snapshotSchedule(cutoffTime);
+    snapshotSchedule.addEvents(snapshotInterval, endTime, snapshotInterval,
+                               NORMAL_SNAPSHOT); // No time multiplier required here as snapshotInterval is already rescaled
+    // Now add manually specified snapshots to the scheduled
+    if (additionalSnapshotsPassed)
+    {
+        snapshotSchedule.addEvents(additionalExplicitSnapshots, NORMAL_SNAPSHOT, timeMultiplier);
+    }
+    // Add extra snapshots
     if (extraSnapshotTimeAbs >= 0 && extraSnapshotTimeAbs <= endTime)
     {
-        extraSnapshotSchedule.addEvent(extraSnapshotTimeAbs, GENERIC_SNAPSHOT);
+        snapshotSchedule.addEvent(extraSnapshotTimeAbs, GENERIC_EXTRA_SNAPSHOT);
     }
     else if (extraSnapshotTimeOffset >= 0 && extraSnapshotTimeOffset <= endTime && cutoffSchedule.size() > 0)
     {
@@ -237,12 +253,12 @@ int main(int argc, const char **argv)
         {
             //todo
             double lastEventTime = cutoffSchedule.getLastEventTime();
-            extraSnapshotSchedule.addEvent(lastEventTime + extraSnapshotTimeOffset, GENERIC_SNAPSHOT); //placeholder
+            snapshotSchedule.addEvent(lastEventTime + extraSnapshotTimeOffset, GENERIC_EXTRA_SNAPSHOT); //placeholder
         }
         else
         {
             double lastEventTime = cutoffSchedule.getLastEventTime();
-            extraSnapshotSchedule.addEvent(lastEventTime + extraSnapshotTimeOffset, GENERIC_SNAPSHOT);
+            snapshotSchedule.addEvent(lastEventTime + extraSnapshotTimeOffset, GENERIC_EXTRA_SNAPSHOT);
         }
     }
     
@@ -394,7 +410,6 @@ int main(int argc, const char **argv)
     rnaWriter.advanceSeries();
     transcriptionWriter.advanceSeries();
     //
-    double nextOutputTime = snapshotInterval;
     double nextChemTime = dtChem;
     unsigned long swapAttempts = 0;
     unsigned long swapsPerformed = 0;
@@ -407,11 +422,11 @@ int main(int argc, const char **argv)
             applyCutoffEvents(logger, cutoffSchedule, microemulsion,
                               allChains, cutoffChains, kOn, kOff,
                               kChromPlus, kChromMinus, kRnaPlus, kRnaMinus,
-                              kRnaTransfer,
+                              kRnaTransfer, txnSpikeFactor,
                               t);
         }
         // Time-stepping loop
-        while (t < nextOutputTime)
+        while (t < snapshotSchedule.getNextEventTime())
         {
             t += dt;
 //            swapsPerformed += microemulsion.performRandomSwap();
@@ -427,19 +442,16 @@ int main(int argc, const char **argv)
             }
         }
         
-        // Writing this step to file
-        takeSnapshots(logger, dnaWriter, rnaWriter, transcriptionWriter, t, swapAttempts, swapsPerformed,
-                      chemChangesPerformed);
-        // Writing extra snapshot if required
-        if (extraSnapshotSchedule.check(t))
+        // Writing the required snapshot(s)
+        if (snapshotSchedule.check(t))
         {
-            extraSnapshotSchedule.popEventsToApply(
-                    t); // Throwing the return value away since we are just going to take 1 extra snapshot per time
-            takeSnapshots(logger, dnaWriter, rnaWriter, transcriptionWriter, t, swapAttempts,
-                          swapsPerformed, chemChangesPerformed, true);
+            auto eventsToApply = snapshotSchedule.popEventsToApply(t);
+            for (auto event : eventsToApply)
+            {
+                takeSnapshots(logger, dnaWriter, rnaWriter, transcriptionWriter, t/timeMultiplier, swapAttempts,
+                              swapsPerformed, chemChangesPerformed, event == GENERIC_EXTRA_SNAPSHOT);
+            }
         }
-        // Advance output timer
-        nextOutputTime += snapshotInterval;
     }
     logger.logEvent(DEBUG, t, "Exiting main time-stepping loop");
     
@@ -450,9 +462,9 @@ int main(int argc, const char **argv)
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
                        const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kOn,
                        double kOff, double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
-                       double kRnaTransfer, double t)
+                       double kRnaTransfer, double txnSpikeFactor, double t)
 {
-    // TODO: this should be converted into using different classes for each event
+    // TODO: we should be using the command pattern for all events...
     auto eventsToApply = eventSchedule.popEventsToApply(t);
     for (auto event : eventsToApply)
     {
@@ -486,7 +498,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
         {
             // Obviously transcription spike includes activation
             logger.logEvent(PRODUCTION, t, "EVENT: Transcription spike");
-            microemulsion.setKOn(1);
+            microemulsion.setKOn(txnSpikeFactor*kOn);
             microemulsion.setKOff(kOff);
             microemulsion.setKChromPlus(kChromPlus);
             microemulsion.setKChromMinus(kChromMinus);
