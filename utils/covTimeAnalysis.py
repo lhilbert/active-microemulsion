@@ -41,9 +41,9 @@ if not csvDirectory:
 args.csvFileName = os.path.join(csvDirectory, csvFilename)
 
 # Expanding and sorting the file list
-DNAFileSequence = FileSequence.expandSequence(DNAInputFiles)
-# RNAFileSequence = FileSequence.expandSequence(RNAInputFiles)
-# TXNFileSequence = FileSequence.expandSequence(TXNInputFiles)
+DNAFileSequence = FileSequence(DNAInputFiles)
+# RNAFileSequence = FileSequence(RNAInputFiles)
+# TXNFileSequence = FileSequence(TXNInputFiles)
 
 # Perform the actual analysis
 covAnalysis = TimeAnalysis(DNAFileSequence, yCovMode=True, blurRadius=args.blurRadius, quiet=args.scriptMode)

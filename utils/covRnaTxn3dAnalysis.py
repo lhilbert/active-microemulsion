@@ -54,9 +54,9 @@ if args.csvInput and args.scatterPlot:
         analyses.append(analysis)
 else:
     # Expanding and sorting the file list
-    xFileSequence = FileSequence.expandSequence(args.xInputFiles)
-    yFileSequence = FileSequence.expandSequence(args.yInputFiles)
-    zFileSequence = FileSequence.expandSequence(args.zInputFiles)
+    xFileSequence = FileSequence(args.xInputFiles)
+    yFileSequence = FileSequence(args.yInputFiles)
+    zFileSequence = FileSequence(args.zInputFiles)
     # Perform the actual analysis
     analysis = CurveAnalysis3D(xFileSequence, yFileSequence, zFileSequence, zCovMode=True, blurRadius=args.blurRadius,
                                quiet=args.scriptMode)

@@ -44,8 +44,8 @@ if not csvDirectory:
 args.csvFileName = os.path.join(csvDirectory, csvFilename)
 
 # Expanding and sorting the file list
-xFileSequence = FileSequence.expandSequence(args.xInputFiles)
-yFileSequence = FileSequence.expandSequence(args.yInputFiles)
+xFileSequence = FileSequence(args.xInputFiles)
+yFileSequence = FileSequence(args.yInputFiles)
 
 # Perform the actual analysis
 analysis = CurveAnalysis(xFileSequence, yFileSequence, yCovMode=True, blurRadius=args.blurRadius, quiet=args.scriptMode)

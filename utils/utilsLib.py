@@ -8,6 +8,7 @@ from mpl_toolkits import mplot3d
 from matplotlib import pyplot as plt
 from natsort import natsorted
 import functools
+import re
 
 
 ### Functions
@@ -77,6 +78,7 @@ def getEntryNearestToValue(givenList, value):
 class Plotter:
     def __init__(self, X, plotFileName="plot.svg", interactive=True, xlabel="", ylabel="", y2label="", xlim=None,
                  ylim=None,
+                 hline=None,
                  scatterPlotMode=False):
         self.X = X
         self.plotFileName = plotFileName
@@ -86,6 +88,7 @@ class Plotter:
         self.y2label = y2label
         self.xlim = xlim
         self.ylim = ylim
+        self.hline = hline
         self.scatterPlotMode = scatterPlotMode
         self.Ys = []
         self.offsets = {}
@@ -162,6 +165,10 @@ class Plotter:
         if self.ax2 and self.y2label:
             self.ax2.set_ylabel(self.y2label)
 
+        # Add horizontal line if necessary
+        if self.hline:
+            plt.axhline(y=self.hline, color='0.6', linestyle='-', lw=2, dashes=[6, 2])
+
         if self.interactive:  # Here switch interactive mode off for matplotlib
             plt.show()
         else:
@@ -189,9 +196,11 @@ class Plotter:
     def configPlotFunctions(self):
         # Choosing the plotting function depending on the mode
         if self.scatterPlotMode:
-            self.plotFunctions[0] = functools.partial(self.ax.scatter, s=4)
+            # self.plotFunctions[0] = functools.partial(self.ax.scatter, s=4)
+            self.plotFunctions[0] = functools.partial(self.ax.scatter, s=10, marker="o")
             if self.ax2:
-                self.plotFunctions[1] = functools.partial(self.ax2.scatter, s=4)
+                # self.plotFunctions[1] = functools.partial(self.ax2.scatter, s=4)
+                self.plotFunctions[1] = functools.partial(self.ax2.scatter, s=10, marker="o")
         else:
             self.plotFunctions[0] = self.ax.plot
             if self.ax2:
@@ -338,12 +347,14 @@ class Plotter3D:
             if self.thinMode:
                 self.plotFunctions[0] = functools.partial(self.ax.scatter3D, s=2, alpha=0.4)
             else:
-                self.plotFunctions[0] = functools.partial(self.ax.scatter3D, s=4)
+                # self.plotFunctions[0] = functools.partial(self.ax.scatter3D, s=4)
+                self.plotFunctions[0] = functools.partial(self.ax.scatter3D, s=4, marker="o")
             if self.ax2:
                 if self.thinMode:
                     self.plotFunctions[1] = functools.partial(self.ax2.scatter3D, s=2, alpha=0.4)
                 else:
-                    self.plotFunctions[1] = functools.partial(self.ax2.scatter3D, s=4)
+                    # self.plotFunctions[1] = functools.partial(self.ax2.scatter3D, s=4)
+                    self.plotFunctions[1] = functools.partial(self.ax2.scatter3D, s=4, marker="o")
         else:
             self.plotFunctions[0] = self.ax.plot3D
             if self.ax2:
@@ -356,14 +367,63 @@ class Plotter3D:
             return self.plotFunctions[0]
 
 
+class FileSequenceItem:
+    def __init__(self, filename):
+        self.name = filename
+        self.id, self.time = FileSequenceItem.__extractIdAndTime(self.name)
+
+    @staticmethod
+    def __extractIdAndTime(name):
+        m = re.search("^.*_EXTRA\.[a-zA-Z]+$", name) # Catch extra files
+        if m:
+            return -1, -1 #todo: check if there is a better way to handle extra files
+
+        m = re.search("^.*_(?P<id>[0-9]+)_(?P<time>[0-9]+\.[0-9]+)[_.].*$", name)
+        if m:
+            # If we are getting a filename with a time, extract id and time
+            return int(m.group("id")), float(m.group("time"))
+        else:
+            # If the name had just the id and no time, gracefully fallback to an id-only match
+            print(">>> DEBUG: name=%s" %(name)) #debug
+            m = re.search("^.*_(?P<id>[0-9]+)[_.].*$", name)
+            return int(m.group("id")), float(m.group("id"))
+
+    def __repr__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
+
+    def getName(self):
+        return self.name
+
+    def getId(self):
+        return self.id
+
+    def getTime(self):
+        return self.time
+
+
 class FileSequence:
+    def __init__(self, fileList):
+        fileList = FileSequence.expandSequence(fileList)
+        self.sequence = [ FileSequenceItem(x) for x in fileList ]
+
+    @classmethod
+    def fromPattern(cls, pattern): # This allows instantiating from a pattern instead of from a list
+        fileList = FileSequence.expand(pattern)
+        return cls(fileList)
+
+    def __iter__(self):
+        return iter(self.sequence)
+
     @staticmethod
     def natsort(sequence):
         return natsorted(sequence)
 
     @staticmethod
     def removeItemContainingSubstring(sequence, substring):
-        targets = [ x for x in sequence if len(x.split(substring))>1 ]
+        targets = [x for x in sequence if len(x.split(substring)) > 1]
         for tgt in targets:
             sequence.remove(tgt)
         return sequence
@@ -377,7 +437,7 @@ class FileSequence:
         fileSequence = []
         removeExtra = True
         for f in inputFileSequence:
-            if "EXTRA" in f:    # If EXTRA files are explicitly passed, then do not remove them from the sequence!
+            if "EXTRA" in f:  # If EXTRA files are explicitly passed, then do not remove them from the sequence!
                 removeExtra = False
             if '*' in f:  # In this case f is a pattern to expand
                 fileSequence.extend(FileSequence.expand(f))
@@ -423,8 +483,8 @@ class CurveAnalysis:
         self.numSamples = len(self.results)
 
     def __analyzeSnapshot(self, snapshotNum, xSnapshotFile, ySnapshotFile):
-        xImg = cv2.imread(xSnapshotFile)
-        yImg = cv2.imread(ySnapshotFile)
+        xImg = cv2.imread(xSnapshotFile.getName())
+        yImg = cv2.imread(ySnapshotFile.getName())
         if type(xImg) == type(None):
             print("WARNING: Image %s cannot be read. Ignoring it." % (xSnapshotFile))
             return
@@ -516,9 +576,9 @@ class CurveAnalysis3D:
         self.numSamples = len(self.results)
 
     def __analyzeSnapshot(self, snapshotNum, xSnapshotFile, ySnapshotFile, zSnapshotFile):
-        xImg = cv2.imread(xSnapshotFile)
-        yImg = cv2.imread(ySnapshotFile)
-        zImg = cv2.imread(zSnapshotFile)
+        xImg = cv2.imread(xSnapshotFile.getName())
+        yImg = cv2.imread(ySnapshotFile.getName())
+        zImg = cv2.imread(zSnapshotFile.getName())
         if type(xImg) == type(None):
             print("WARNING: Image %s cannot be read. Ignoring it." % (xSnapshotFile))
             return
@@ -636,23 +696,23 @@ class TimeAnalysis:
         self.__analyzeSequence(self.yAxisFileSequence)
         self.numSamples = len(self.results)
 
-    def __analyzeSnapshot(self, snapshotNum, ySnapshotFile):
-        yImg = cv2.imread(ySnapshotFile)
+    def __analyzeSnapshot(self, ySnapshotFileItem):
+        yImg = cv2.imread(ySnapshotFileItem.getName())
         if type(yImg) == type(None):
-            print("WARNING: Image %s cannot be read. Ignoring it." % (ySnapshotFile))
+            print("WARNING: Image %s cannot be read. Ignoring it." % (ySnapshotFileItem))
             return
         blurredYImg = cv2.GaussianBlur(yImg, (self.blurRadius, self.blurRadius), 0)
         yCov, yMean = computeCov(blurredYImg)
         yValue = yMean
         if self.yCovMode:
             yValue = yCov
-        self.results.append([snapshotNum, snapshotNum, yValue])
+        self.results.append([ySnapshotFileItem.getId(), ySnapshotFileItem.getTime(), yValue])
         if not self.quiet:
-            print("> %d : xData = %f, yData = %f" % (snapshotNum, snapshotNum, yValue))
+            print("> %d : xData = %f, yData = %f" % (ySnapshotFileItem.getId(), ySnapshotFileItem.getTime(), yValue))
 
     def __analyzeSequence(self, yFileSequence):
         for id, y in enumerate(yFileSequence):
-            self.__analyzeSnapshot(id, y)
+            self.__analyzeSnapshot(y)
         self.resultMatrix = np.array(self.results)
         self.resultDict["id"] = list(self.resultMatrix[:, 0])
         self.resultDict["X"] = list(self.resultMatrix[:, 1])
@@ -682,7 +742,8 @@ class TimeAnalysis:
         return self.numSamples
 
     def getSnapshotNumber(self):
-        return [self.deltaT * x for x in self.resultDict["id"][self.skip:]]
+        # return [self.deltaT * x for x in self.resultDict["id"][self.skip:]]
+        return [self.deltaT * x for x in self.resultDict["X"][self.skip:]]
 
     def getXData(self):
         return self.getSnapshotNumber()

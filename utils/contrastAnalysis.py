@@ -28,7 +28,7 @@ class Analysis:
         self.numSamples = len(self.results)
 
     def __analyzeSnapshot(self, snapshotNum, snapshotFile):
-        img = cv2.imread(snapshotFile)
+        img = cv2.imread(snapshotFile.getName())
         if type(img) == type(None):
             print("WARNING: Image %s cannot be read. Ignoring it." % (snapshotFile))
             return
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     args.csvFileName = os.path.join(csvDirectory, csvFilename)
 
     # Expanding and sorting the file list
-    fileSequence = FileSequence.expandSequence(args.inputFiles)
+    fileSequence = FileSequence(args.inputFiles)
 
     # Perform the actual analysis
     analysis = Analysis(fileSequence, blurRadius=args.blurRadius, quiet=args.scriptMode)

@@ -47,8 +47,8 @@ if not csvDirectory:
 args.csvFileName = os.path.join(csvDirectory, csvFilename)
 
 # Expanding and sorting the file list
-xFileSequence = FileSequence.expandSequence(args.xInputFiles)
-yFileSequence = FileSequence.expandSequence(args.yInputFiles)
+xFileSequence = FileSequence(args.xInputFiles)
+yFileSequence = FileSequence(args.yInputFiles)
 
 # Perform the actual analysis
 analysis = CurveAnalysis(xFileSequence, yFileSequence, blurRadius=args.blurRadius, quiet=args.scriptMode)
@@ -65,8 +65,10 @@ CsvWriter(analysis.resultsKeys, analysis.results).write(args.csvFileName)
 plotter = Plotter(analysis.getXData(), plotFileName=args.plotFileName,
                   xlabel="Transcription Intensity", ylabel="RNA Intensity",
                   interactive=(not args.scriptMode),
-                  scatterPlotMode=(not not args.scatterPlot),
-                  xlim=(0,60), ylim=(0, 8))
+                  scatterPlotMode=(not not args.scatterPlot)
+                  , xlim=(0,40), ylim=(0, 15))
+                  # , xlim=(0,80), ylim=(0, 1.5))
+                  # )
 
 if args.flavopiridol > 0:
     eventTime = args.flavopiridol
