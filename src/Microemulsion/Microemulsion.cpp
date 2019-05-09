@@ -725,16 +725,49 @@ void Microemulsion::setTranscriptionInhibitionOnChains(const std::set<ChainId> &
     }
 }
 
-void Microemulsion::enableTranscribabilityOnChains(std::set<ChainId> targetChains)
+void Microemulsion::enablePermissivityOnChains(std::set<ChainId> targetChains)
 {
     logger.logMsg(PRODUCTION, "Transcription enabled on %d chains", targetChains.size());
     setTranscriptionInhibitionOnChains(targetChains, TRANSCRIPTION_POSSIBLE);
 }
 
-void Microemulsion::disableTranscribabilityOnChains(std::set<ChainId> targetChains)
+void Microemulsion::disablePermissivityOnChains(std::set<ChainId> targetChains)
 {
     logger.logMsg(PRODUCTION, "Transcription inhibited on %d chains", targetChains.size());
     setTranscriptionInhibitionOnChains(targetChains, TRANSCRIPTION_INHIBITED);
+}
+
+void Microemulsion::setTranscribabilityOnChains(const std::set<ChainId> &targetChains,
+                                                       const Transcribability &transcribability) const
+{
+    for (int row = grid.getFirstRow(); row <= grid.getLastRow(); ++row)
+    {
+        for (int column = grid.getFirstColumn(); column <= grid.getLastColumn(); ++column)
+        {
+            CellData &curCell = grid.getElement(column, row);
+            std::set<ChainId> curCellChains = curCell.chainsCellBelongsTo();
+            std::set<ChainId> matches;
+            set_intersection(curCellChains.begin(), curCellChains.end(),
+                             targetChains.begin(), targetChains.end(),
+                             inserter(matches, matches.begin()));
+            if (!matches.empty())
+            {
+                curCell.setTranscribability(transcribability);
+            }
+        }
+    }
+}
+
+void Microemulsion::enableTranscribabilityOnChains(std::set<ChainId> targetChains)
+{
+    logger.logMsg(PRODUCTION, "Transcribable state enabled on %d chains", targetChains.size());
+    setTranscribabilityOnChains(targetChains, TRANSCRIBABLE);
+}
+
+void Microemulsion::disableTranscribabilityOnChains(std::set<ChainId> targetChains)
+{
+    logger.logMsg(PRODUCTION, "Transcribable state disabled on %d chains", targetChains.size());
+    setTranscribabilityOnChains(targetChains, NOT_TRANSCRIBABLE);
 }
 
 bool Microemulsion::isSwapBlockedByStickyBoundary(int x, int y, int nx, int ny)
