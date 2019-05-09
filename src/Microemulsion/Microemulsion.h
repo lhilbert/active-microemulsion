@@ -76,12 +76,19 @@ public:
      * Switch the given chain to the transcribable state.
      * @param targetChains
      */
+    void enablePermissivityOnChains(std::set<ChainId> targetChains);
+    
+    void disablePermissivityOnChains(std::set<ChainId> targetChains);
+    
+    void
+    setTranscriptionInhibitionOnChains(const std::set<ChainId> &targetChains, const TranscriptionInhibition &inhibition) const;
+    
     void enableTranscribabilityOnChains(std::set<ChainId> targetChains);
     
     void disableTranscribabilityOnChains(std::set<ChainId> targetChains);
     
     void
-    setTranscriptionInhibitionOnChains(const std::set<ChainId> &targetChains, const TranscriptionInhibition &inhibition) const;
+    setTranscribabilityOnChains(const std::set<ChainId> &targetChains, const Transcribability &transcribability) const;
 
 private:
     double computePartialDifferentialEnergy(int x, int y, int nx, int ny);

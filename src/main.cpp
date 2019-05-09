@@ -14,9 +14,9 @@
 namespace opt = boost::program_options;
 
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
-                       const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kOn,
-                       double kOff, double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
-                       double kRnaTransfer, double txnSpikeFactor, double t);
+                       const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains,
+                       const std::set<ChainId> &permissibleChains, double kOn, double kOff, double kChromPlus,
+                       double kChromMinus, double kRnaPlus, double kRnaMinus, double kRnaTransfer, double t);
 
 void takeSnapshots(Logger &logger, PgmWriter &dnaWriter, PgmWriter &rnaWriter, PgmWriter &transcriptionWriter, double t,
                    unsigned long swapAttempts, unsigned long swapsPerformed, unsigned long chemChangesPerformed,
@@ -33,7 +33,6 @@ int main(int argc, const char **argv)
     unsigned int swapRounds = 0;
     int swapsPerPixelPerUnitTime = 500;
     int numVisualizationOutputs = 100; //todo read this from config
-    double txnSpikeFactor = 100;
     double snapshotInterval = -1;
     double extraSnapshotTimeOffset = -1;
     double extraSnapshotTimeAbs = -1;
@@ -71,8 +70,6 @@ int main(int argc, const char **argv)
             ("txn-spike",
              opt::value<std::vector<double>>(&txnSpikeEvents)->multitoken()->zero_tokens()->composing(),
              "Set a transcription spike at cutoff time. Cutoff time(s) can be specified as parameter")
-            ("txn-spike-factor", opt::value<double>(&txnSpikeFactor)->default_value(100),
-             "Factor to apply to kOn for the txnSpike")
             ("output-dir,o", opt::value<std::string>(&outputDir)->default_value("./Out"),
              "Specify the folder to use for output (log and data)")
             ("input-image,i", opt::value<std::string>(&inputImage)->default_value(""),
@@ -335,7 +332,7 @@ int main(int argc, const char **argv)
     
     // Initialize data structures...
     logger.logMsg(PRODUCTION, "Reading polymeric chains configuration");
-    std::set<ChainId> allChains, cutoffChains;
+    std::set<ChainId> allChains, cutoffChains, permissibleChains;
     Grid grid(columns, rows, logger);
     GridInitializer::initializeInnerGridAs(grid, CellData::chemicalPropertiesOf(RBP, NOT_ACTIVE));
     // ...and read chains configuration
@@ -358,6 +355,12 @@ int main(int argc, const char **argv)
         {
             cutoffChains.insert(newChain.begin(), newChain.end());
         }
+        
+        // Keeping track of permissible chains, so that we can also switch their transcribablility easily.
+        if (!chainConfig.isInhibited())
+        {
+            permissibleChains.insert(newChain.begin(), newChain.end());
+        }
     }
     
     int numRbpCells = grid.getSpeciesCount(RBP);
@@ -366,7 +369,7 @@ int main(int argc, const char **argv)
     double chromatinRatio = static_cast<double>(numChromatinCells) / numInnerCells;
     logger.logMsg(PRODUCTION, "GRID: %s=%d, %s=%d, %s=%.3f, %s=%.3f", DUMP(numChromatinCells), DUMP(numRbpCells),
                   DUMP(chromatinRatio), DUMP(rbpRatio));
-    logger.logMsg(PRODUCTION, "CHAINS: %s=%d, %s=%d", DUMP(allChains.size()), DUMP(cutoffChains.size()));
+    logger.logMsg(PRODUCTION, "CHAINS: %s=%d, %s=%d, %s=%d", DUMP(allChains.size()), DUMP(cutoffChains.size()), DUMP(permissibleChains.size()));
     logger.logMsg(PRODUCTION, "Initializing microemulsion: %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f, %s=%f",
                   DUMP(dtChem), DUMP(kOn), DUMP(kOff), DUMP(kChromPlus), DUMP(kChromMinus), DUMP(kRnaPlus),
                   DUMP(kRnaMinus), DUMP(kRnaTransfer));
@@ -420,9 +423,9 @@ int main(int argc, const char **argv)
         if (cutoffSchedule.check(t))
         {
             applyCutoffEvents(logger, cutoffSchedule, microemulsion,
-                              allChains, cutoffChains, kOn, kOff,
+                              allChains, cutoffChains, permissibleChains, kOn, kOff,
                               kChromPlus, kChromMinus, kRnaPlus, kRnaMinus,
-                              kRnaTransfer, txnSpikeFactor,
+                              kRnaTransfer,
                               t);
         }
         // Time-stepping loop
@@ -460,9 +463,9 @@ int main(int argc, const char **argv)
 }
 
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
-                       const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains, double kOn,
-                       double kOff, double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,
-                       double kRnaTransfer, double txnSpikeFactor, double t)
+                       const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains,
+                       const std::set<ChainId> &permissibleChains, double kOn, double kOff, double kChromPlus,
+                       double kChromMinus, double kRnaPlus, double kRnaMinus, double kRnaTransfer, double t)
 {
     // TODO: we should be using the command pattern for all events...
     auto eventsToApply = eventSchedule.popEventsToApply(t);
@@ -496,24 +499,17 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
         }
         else if (event == TXN_SPIKE)
         {
-            // Obviously transcription spike includes activation
+            // NOTE: transcription spike DOES NOT include activation
             logger.logEvent(PRODUCTION, t, "EVENT: Transcription spike");
-            microemulsion.setKOn(txnSpikeFactor*kOn);
-            microemulsion.setKOff(kOff);
-            microemulsion.setKChromPlus(kChromPlus);
-            microemulsion.setKChromMinus(kChromMinus);
-            microemulsion.setKRnaPlus(kRnaPlus);
-            microemulsion.setKRnaMinusRbp(kRnaMinus);
-            microemulsion.setKRnaMinusTxn(0);
-            microemulsion.setKRnaTransfer(kRnaTransfer);
+            microemulsion.enableTranscribabilityOnChains(permissibleChains);
         }
         else
         {
             // Testing playground here...
             logger.logEvent(PRODUCTION, t, "EVENT: Applying custom cutoff conditions");
 //            microemulsion.setKRnaMinusRbp(0);
-            microemulsion.setTranscriptionInhibitionOnChains(allChains, TRANSCRIPTION_POSSIBLE);
-            microemulsion.setTranscriptionInhibitionOnChains(cutoffChains, TRANSCRIPTION_INHIBITED);
+            microemulsion.enablePermissivityOnChains(allChains);
+            microemulsion.disablePermissivityOnChains(cutoffChains);
         }
     }
 }
