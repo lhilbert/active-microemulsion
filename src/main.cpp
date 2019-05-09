@@ -322,6 +322,7 @@ int main(int argc, const char **argv)
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(numThreads));
     logger.logMsg(logger.getDebugLevel(), "Parameters logging: %s=%d", DUMP(swapRounds));
     
+    logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(endTime));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dt));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(dtChem));
     logger.logMsg(logger.getDebugLevel(), "Timers logging: %s=%f", DUMP(snapshotInterval));
