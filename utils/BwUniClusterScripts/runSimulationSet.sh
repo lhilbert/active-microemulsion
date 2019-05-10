@@ -14,12 +14,12 @@ END_TIME=90
 RT_HOURS=( 18 18 ) #max is 72h=3d
 BASE_OPTS_NAMES=( "Run1_name" "Run2_name" )
 BASE_OPTS=( 
-    "--threads 1 -W 100 -H 100 --chain-generator-sparse --chain-generator-I 0.4 --chain-generator-n 25 -w 0.25 -s 4500 --kRnaPlus 1.1111e-1 --kRnaMinusRbp 5.5555e-4 --kChromPlus 0.075 --kChromMinus 1.6666e-3 --kOn 1.852e-4 --kOff 1.6666e-3 --kRnaTransfer 5.5555e-4 --txn-spike-factor 100 -m -t 1 --additional-snapshots 10.1 10.2 10.3 10.4 10.5 10.6 10.7 10.8 10.9 11.25 11.5 11.75 12.5 13.5 14.5 15.5 16.5 17.5 18.5 19.5 --flavopiridol 0"
-    "--threads 1 -W 100 -H 100 --chain-generator-sparse --chain-generator-I 0.6 --chain-generator-n 25 -w 0.25 -s 4500 --kRnaPlus 1.1111e-1 --kRnaMinusRbp 5.5555e-4 --kChromPlus 0.075 --kChromMinus 1.6666e-3 --kOn 1.852e-4 --kOff 1.6666e-3 --kRnaTransfer 5.5555e-4 --txn-spike-factor 100 -m -t 1 --additional-snapshots 10.1 10.2 10.3 10.4 10.5 10.6 10.7 10.8 10.9 11.25 11.5 11.75 12.5 13.5 14.5 15.5 16.5 17.5 18.5 19.5 --flavopiridol 0"
+    "--threads 1 -W 100 -H 100 --chain-generator-sparse --chain-generator-I 0.4 --chain-generator-n 25 -w 0.25 -s 4500 --kRnaPlus 1.1111e-1 --kRnaMinusRbp 5.5555e-4 --kChromPlus 0.075 --kChromMinus 1.6666e-3 --kOn 1.852e-4 --kOff 1.6666e-3 --kRnaTransfer 5.5555e-4 -m -t 1 --additional-snapshots 10.1 10.2 10.3 10.4 10.5 10.6 10.7 10.8 10.9 11.25 11.5 11.75 12.5 13.5 14.5 15.5 16.5 17.5 18.5 19.5 --flavopiridol 0"
+    "--threads 1 -W 100 -H 100 --chain-generator-sparse --chain-generator-I 0.6 --chain-generator-n 25 -w 0.25 -s 4500 --kRnaPlus 1.1111e-1 --kRnaMinusRbp 5.5555e-4 --kChromPlus 0.075 --kChromMinus 1.6666e-3 --kOn 1.852e-4 --kOff 1.6666e-3 --kRnaTransfer 5.5555e-4 -m -t 1 --additional-snapshots 10.1 10.2 10.3 10.4 10.5 10.6 10.7 10.8 10.9 11.25 11.5 11.75 12.5 13.5 14.5 15.5 16.5 17.5 18.5 19.5 --flavopiridol 0"
 )
 
 ###
-ACTIVATE_OPTS="--txn-spike ${ACTIVATION} --activate ${ACTIVATION}.99" # This is a hack to do a one-minute txn spike at the activation time.
+ACTIVATE_OPTS="--txn-spike ${ACTIVATION} --activate ${ACTIVATION}"
 #ACTIVATE_OPTS="--activate ${ACTIVATION}"
 #ACTIVATE_OPTS=""
 ###
@@ -97,13 +97,13 @@ for  ((i = 0; i < ${#SPECIFIC_OPTS[@]}; i++)); do
         rm ${JOBFILE}
     else
         echo "" >> ${JOBFILE}
-            chmod +x ${JOBFILE}
+        chmod +x ${JOBFILE}
         CMD="msub -m bea -M ${EMAIL_ADDRESS} -q singlenode -N ${NICKNAMES[i]} -l pmem=1024mb,nodes=1:ppn=${SIM_PER_JOB},walltime=${currentRunTimeHours}:00:00 -v SCRIPT_FLAGS=${JOBFILE} parbatch-wrapper.sh"
-            #echo "k=$k; i=$i; J=$J" #debug
+        #echo "k=$k; i=$i; J=$J" #debug
         echo ${CMD}
         cat ${JOBFILE}
-            ${CMD}
-            counter=$[counter+1]
+        ${CMD} # Comment this line for a dry run
+        counter=$[counter+1]
     fi
     done
 done
