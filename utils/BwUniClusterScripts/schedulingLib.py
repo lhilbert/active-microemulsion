@@ -121,7 +121,7 @@ class ParbatchBundle:
 
     def writeJobFile(self):
         with open(self.jobFileName, 'w', encoding='utf-8') as f:
-            f.writelines([str(x) for x in self.simulations])
+            f.writelines([str(x)+'\n' for x in self.simulations])
         os.chmod(self.jobFileName, 0o755)
 
     def dumpJobFileContent(self):
