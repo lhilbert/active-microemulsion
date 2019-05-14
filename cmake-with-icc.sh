@@ -13,6 +13,10 @@ export CXX=icpc
 #BUILD_TYPE="PGO"
 BUILD_TYPE="Release"
 
+# Enable the below only if a profile has already been generated using the PGO build type (see docs)
+ENABLE_PGO_USE=0
+# ENABLE_PGO_USE=1
+
 if [[ "$1" != "" ]]; then
     BUILD_TYPE="$1"
 fi
@@ -23,7 +27,7 @@ TARGET="active-microemulsion"
 
 mkdir -p ${BUILD_DIR}
 pushd ${BUILD_DIR}
-cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -G "CodeBlocks - Unix Makefiles" ${SRC_DIR}
+cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DENABLE_PGO_USE=${ENABLE_PGO_USE} -G "CodeBlocks - Unix Makefiles" ${SRC_DIR}
 cmake --build ${BUILD_DIR} --target ${TARGET} -- -j 2
 popd
 ln -sf ${BUILD_DIR}/src/${TARGET} ${SRC_DIR}/.
