@@ -21,6 +21,8 @@ These can be obtained on Ubuntu from the official repositories by installing the
 ### How to actually build?
 Full documentation for how to build, configure and run can be found at the [documentation page](https://github.com/lhilbert/active-microemulsion/tree/master/documentation) of the repository.
 
+You can also find a [tutorial for building and scheduling on BwUniCluster](https://github.com/lhilbert/active-microemulsion/blob/master/documentation/tutorial.md) (work in progress...).
+
 ## Usage
 Basic usage:
 ```
