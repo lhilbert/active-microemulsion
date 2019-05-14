@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if command -v module 1>/dev/null 2>&1; then
-    module load lib/boost devel/cmake/3.11.1
+    module load lib/boost devel/cmake
     module unload compiler/gnu
     module load compiler/intel
 fi
