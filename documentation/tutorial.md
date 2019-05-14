@@ -21,6 +21,8 @@ Now you can do a simple build with:
 ```
 This command will load the right dependency modules and perform the build with the Intel icpc compiler with normal optimization level.
 
+In case you get strange errors (e.g. related to missing OpenMP), just try removing the `cmake-build-icc/` folder and building again.
+
 #### PGO - Profile-Guided Optimization
 The Intel compiler supports the so called "Profile-Guided Optimization" or [PGO](https://software.intel.com/en-us/articles/step-by-step-optimizing-with-intel-c-compiler#s5).
 This build mode is based on first recording a profile of the application, e.g. from a short run, and then using it for optimizing a subsequent build.
