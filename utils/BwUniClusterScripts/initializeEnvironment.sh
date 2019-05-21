@@ -4,7 +4,9 @@
 # It links all the scripts which are necessary for scheduling into the main folder
 
 targetDir="utils/BwUniClusterScripts"
-targets=('parbatch-wrapper.sh' 'moab-job.sh' 'runSimulationSet.py' 'schedulingLib.py')
+targets=('parbatch-wrapper.sh' 'moab-job.sh' \
+        'runSimulationSet.py' 'schedulingLib.py' \
+        'initializeEnvironment.sh')
 
 ###
 
@@ -16,8 +18,7 @@ fi
 # Link all to base directory
 echo "Linking scripts..."
 for item in ${targets[@]}; do
-    tgt="${targetDir}/${item}"
-    [[ ! -e ${tgt} ]] && ln -s ${tgt} ./
+    [[ ! -e ${item} ]] && ln -s ${targetDir}/${item} ./
 done
 
 # Load python3 module
