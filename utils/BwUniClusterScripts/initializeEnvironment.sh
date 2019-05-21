@@ -4,24 +4,17 @@
 # It links all the scripts which are necessary for scheduling into the main folder
 
 targetDir="utils/BwUniClusterScripts"
-targetExecs=('parbatch-wrapper.sh' 'moab-job.sh' 'runSimulationSet.py')
-targetLibs=('schedulingLib.py')
+targets=('parbatch-wrapper.sh' 'moab-job.sh' 'runSimulationSet.py' 'schedulingLib.py')
 
 ###
-all=("${targetExecs[@]}" "${targetLibs[@]}")
 
 if [[ ! -d ${targetDir} ]]; then
     echo "Cannot find ${targetDir}, make sure to be in the repo main directory!" 1>&2
     exit 1
 fi
 
-# Set exec permissions on execs
-for item in ${targetExecs[@]}; do
-    chmod +x ${targetDir}/${item}
-done
-
 # Link all to base directory
-for item in ${all[@]}; do
+for item in ${targets[@]}; do
     ln -s ${targetDir}/${item} ./
 done
 
