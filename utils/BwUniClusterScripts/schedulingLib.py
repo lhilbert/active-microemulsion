@@ -38,7 +38,8 @@ class ShellCommand:
 
 class Simulation:
     def __init__(self,
-                 folder,
+                 jobFolder,
+                 repoFolder,
                  numThreads=1,
                  size=(100, 100),
                  chainGeneratorOpts="--chain-generator-sparse --chain-generator-I 0.4 --chain-generator-n 25",
@@ -51,7 +52,8 @@ class Simulation:
         if additionalSnapshots is None:
             additionalSnapshots = []
         self.executable = executable
-        self.folder = folder
+        self.jobFolder = jobFolder
+        self.repoBaseDir = repoFolder
         self.numThreads = numThreads
         self.size = size
         self.chainGeneratorOpts = chainGeneratorOpts
@@ -63,17 +65,17 @@ class Simulation:
 
     def __str__(self):
         if type(self.endTime) == float:
-            return "hostname; %s --job-folder-name %s --threads %d -W %d -H %d " \
+            return "hostname; %s --repo-base-dir %s --job-folder-name %s --threads %d -W %d -H %d " \
                     "%s %s --additional-snapshots %s " \
                     "%s -E %f -T %f" \
-                    % (self.executable, self.folder, self.numThreads, self.size[0], self.size[1],
+                    % (self.executable, self.repoBaseDir, self.jobFolder, self.numThreads, self.size[0], self.size[1],
                        self.chainGeneratorOpts, self.staticOpts, self.additionalSnapshots,
                        self.eventsOpts, self.endTime, self.endTime)
         else:
-            return "hostname; %s --job-folder-name %s --threads %d -W %d -H %d " \
+            return "hostname; %s --repo-base-dir %s --job-folder-name %s --threads %d -W %d -H %d " \
                    "%s %s --additional-snapshots %s " \
                    "%s -E %d -T %d" \
-                   % (self.executable, self.folder, self.numThreads, self.size[0], self.size[1],
+                   % (self.executable, self.repoBaseDir, self.jobFolder, self.numThreads, self.size[0], self.size[1],
                       self.chainGeneratorOpts, self.staticOpts, self.additionalSnapshots,
                       self.eventsOpts, self.endTime, self.endTime)
 
@@ -161,6 +163,7 @@ class SimulationSet:
                  performControl=True,
                  performAdditionalRelaxations=True,
                  treatment2EndDelay=30,
+                 repoBaseDir="", # If not set, the CWD will be taken
                  dryRun=False):
         self.emailAddress = emailAddress
         self.wallTimeHours = wallTimeHours
@@ -178,6 +181,8 @@ class SimulationSet:
         self.control = performControl
         self.relaxations = performAdditionalRelaxations
         self.treatment2EndDelay = treatment2EndDelay
+        self.repoBaseDir = repoBaseDir if repoBaseDir else ShellCommand("pwd",
+                                                                        echo=False).stdout()
         self.dryRun = dryRun
         self.simulations = []
         self.bundles = []
@@ -241,7 +246,7 @@ class SimulationSet:
                 else:
                     treatmentFlag = ""
                 eventsFlags = "--flavopiridol 0 %s %s" % (activationFlags, treatmentFlag)
-                curSim = Simulation(folder, 1, self.size,
+                curSim = Simulation(folder, self.repoBaseDir, 1, self.size,
                                     self.chainGeneratorOpts, self.staticOpts,
                                     self.additionalSnapshots,
                                     eventsFlags,
@@ -251,7 +256,7 @@ class SimulationSet:
     def __generateRelaxationRuns(self, endTime, folder):
         if endTime > self.activationTime and endTime <= self.treatment2EndDelay:
             eventsFlags = "--flavopiridol 0"
-            curSim = Simulation(folder, 1, self.size,
+            curSim = Simulation(folder, self.repoBaseDir, 1, self.size,
                                 self.chainGeneratorOpts, self.staticOpts,
                                 self.additionalSnapshots,
                                 eventsFlags,
@@ -261,7 +266,7 @@ class SimulationSet:
     def __generateControlRuns(self, endTime, folder):
         activationFlags = self.getActivationFlags(endTime)
         eventsFlags = "--flavopiridol 0 %s" % (activationFlags)
-        curSim = Simulation(folder, 1, self.size,
+        curSim = Simulation(folder, self.repoBaseDir, 1, self.size,
                             self.chainGeneratorOpts, self.staticOpts,
                             self.additionalSnapshots,
                             eventsFlags,

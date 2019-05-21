@@ -25,21 +25,23 @@ simSet.schedule()
 print("--> Jobs scheduled: %d", simSet.numBundles())
 print("--> Simulations scheduled: %d", simSet.numSimulations())
 
-# emailAddress,
-# wallTimeHours,
-# simSetName,
-# endTime,
-# notifyEvents="bea",
-# size=(100, 100),
-# chainGeneratorOpts="--chain-generator-sparse --chain-generator-I 0.4 --chain-generator-n 25",
-# staticOpts="",
-# additionalSnapshots=(),
-# activationTime=0,
-# activationEvents=("--txn-spike", "--activate"),
-# treatmentFlags=("--flavopiridol", "--actinomycin-D"),
-# additionalTreatmentTimes=(),
-# performControl=True,
-# performAdditionalRelaxations=True,
-# treatment2EndDelay=30,
-# dryRun = False
-
+# SimulationSet(
+#     emailAddress,
+#     wallTimeHours,
+#     simSetName,
+#     endTime,
+#     notifyEvents="bea",
+#     size=(100, 100),
+#     chainGeneratorOpts="--chain-generator-sparse --chain-generator-I 0.4 --chain-generator-n 25",
+#     staticOpts="",
+#     additionalSnapshots=(),
+#     activationTime=0,
+#     activationEvents=("--txn-spike", "--activate"),
+#     treatmentFlags=("--flavopiridol", "--actinomycin-D"),
+#     additionalTreatmentTimes=(),
+#     performControl=True,
+#     performAdditionalRelaxations=True,
+#     treatment2EndDelay=30,
+#     repoBaseDir="", # If not set, the CWD will be taken
+#     dryRun=False
+# )

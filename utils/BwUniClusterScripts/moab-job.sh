@@ -51,6 +51,7 @@ SGE_FOLDER="DefaultOut"
 CHAIN_GEN_I="0.4"
 CHAIN_GEN_n=""
 CHAIN_GEN_s=""
+REPO_BASE_DIR=${HOME}/Repo/active-microemulsion # This is overridden by the "--repo-base-dir" cmdline flag
 
 # Capture the raw input args
 RAW_CMDLINE="$@"
@@ -63,6 +64,11 @@ while [[ $# -gt 0 ]]
 do
 key="$1"
 case $key in
+    --repo-base-dir)
+    REPO_BASE_DIR="$2"
+    shift
+    shift
+    ;;
     --chain-generator-n)
     CHAIN_GEN_n="$2"
     shift
@@ -101,7 +107,6 @@ CHAIN_GEN_ARGS="-C 0.5 -I ${CHAIN_GEN_I} ${CHAIN_GEN_s}" # Number of chains is a
 RESOLUTION="$(echo ${CONFIG_FLAGS} | getResolutionConfig)"
 
 # Settings for config data and shared libraries
-REPO_BASE_DIR=${HOME}/Repo/active-microemulsion
 REPO_ITEMS_TO_COPY=( "active-microemulsion" "cmake-build-*" "lib" "ChainConfigs" "utils" ) # Will be copied with "cp -r"
 
 # Destination directory
