@@ -14,9 +14,12 @@ if [[ ! -d ${targetDir} ]]; then
 fi
 
 # Link all to base directory
+echo "Linking scripts..."
 for item in ${targets[@]}; do
-    ln -s ${targetDir}/${item} ./
+    tgt="${targetDir}/${item}"
+    [[ ! -e ${tgt} ]] && ln -s ${tgt} ./
 done
 
 # Load python3 module
+echo "Loading python3 module..."
 module load devel/python/3.5.2
