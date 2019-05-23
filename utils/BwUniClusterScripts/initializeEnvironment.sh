@@ -22,5 +22,5 @@ for item in ${targets[@]}; do
 done
 
 # Load python3 module
-echo "Loading python3 module..."
-module load devel/python/3.5.2
+echo "Don't forget to load python3 module with:"
+echo "module load devel/python/3.5.2"
