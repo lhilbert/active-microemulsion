@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 if command -v module 1>/dev/null 2>&1; then
-    module load lib/boost devel/cmake
+#    module load lib/boost devel/cmake
+    module load lib/boost/1.56.0 devel/cmake # This is because with boost 1.61 we get a segfault, to be investigated
     module unload compiler/gnu
     module load compiler/intel
 fi
