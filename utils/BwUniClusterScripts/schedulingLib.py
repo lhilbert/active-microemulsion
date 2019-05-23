@@ -181,8 +181,9 @@ class SimulationSet:
         self.control = performControl
         self.relaxations = performAdditionalRelaxations
         self.treatment2EndDelay = treatment2EndDelay
-        self.repoBaseDir = repoBaseDir if repoBaseDir else ShellCommand("pwd",
-                                                                        echo=False).stdout()
+        pwdRaw = ShellCommand("pwd", echo=False).stdout().split('/')
+        pwdSanitized='/'+'/'.join(pwdRaw[pwdRaw.index('home'):]) # This is to remove leading alias path on BwUniCluster
+        self.repoBaseDir = repoBaseDir if repoBaseDir else pwdSanitized
         self.dryRun = dryRun
         self.simulations = []
         self.bundles = []

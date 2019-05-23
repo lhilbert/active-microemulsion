@@ -51,7 +51,7 @@ SGE_FOLDER="DefaultOut"
 CHAIN_GEN_I="0.4"
 CHAIN_GEN_n=""
 CHAIN_GEN_s=""
-REPO_BASE_DIR=${HOME}/Repo/active-microemulsion # This is overridden by the "--repo-base-dir" cmdline flag
+REPO_BASE_DIR=${HOME}/active-microemulsion # This is overridden by the "--repo-base-dir" cmdline flag
 
 # Capture the raw input args
 RAW_CMDLINE="$@"
