@@ -35,3 +35,6 @@ LennartOldCode
 __pycache__
 
 #eof
+
+# Ignore files created by Mac OS
+.DS_Store
