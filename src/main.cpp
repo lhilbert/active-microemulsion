@@ -483,7 +483,7 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
             microemulsion.setKChromPlus(0);
             microemulsion.setKChromMinus(0);
             microemulsion.setKRnaPlus(0);
-            microemulsion.setKRnaMinusTxn(kRnaMinus);
+            microemulsion.setKRnaMinusTxn(0); // RNA attached at transcription site is not degraded
             microemulsion.setKRnaTransfer(0); // RNA should not be transferred from TXN sites to RBP
         }
         else if (event == ACTIVATE)
