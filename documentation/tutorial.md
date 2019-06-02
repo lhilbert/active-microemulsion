@@ -31,7 +31,7 @@ In our case using PGO improves the runtime and is therefore recommended to build
 To build with PGO follow these steps:
 1. Edit `cmake-with-icc.sh` (e.g. using `vim` or `nano` on the cluster) by setting the `BUILD_TYPE` variable to the `PGO` value (you can uncomment and comment the `PGO` and `Release` values respectively).
 2. Build with `./cmake-with-icc.sh`. This will create a special version of the executable which is capable of recording the profiling data.
-3. Now run a short simulation locally on the login node (you may need to copy the `libiomp5.so` lib locally). It is important to run this simulation with some chain configuration, as e.g. `ChainConfigs/halfActive_*`.
+3. Now run a short simulation locally on the login node (you may need to copy the `libiomp5.so` lib locally, the command is 'cp /opt/intel/compilers_and_libraries/linux/lib/intel64/libiomp5.so .'). It is important to run this simulation with some chain configuration, as e.g. `ChainConfigs/halfActive_*`.
 4. Now edit `cmake-with-icc.sh` again and revert the `BUILD_TYPE` to `Release` **and set `ENABLE_PGO_USE=1`**.
 5. Finally build again with `./cmake-with-icc.sh`. The `active-microemulsion` executable is now optimized and ready to be used.
 
