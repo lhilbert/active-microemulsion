@@ -20,6 +20,8 @@ The `cmake-with-icc` script is simply a wrapper which loads the relevant modules
 
 The process can also be compiled with `gcc` or `clang`, either by using the respective scripts or by manually loading the relevant modules and executing the appropriate cmake commands.
 
+There is more info on building with optimization on the bwUniCluster in the tutorial: https://github.com/lhilbert/active-microemulsion/blob/master/documentation/tutorial.md
+
 ## Building on other HPC clusters
 Building on other clusters should require simply to identify which modules are responsible for the dependencies. Then simply edit the  `cmake-with-icc` script to load the correct modules.
 
