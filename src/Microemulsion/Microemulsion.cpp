@@ -58,7 +58,7 @@ bool Microemulsion::performRandomSwap(int x, int y)
     }
     
     // Here we check if we are nearby the domain boundary and if we need to "stick" to it.
-    if (isBoundarySticky && isSwapBlockedByStickyBoundary(x, y, 0, 0))
+    if (isBoundarySticky && isSwapBlockedByStickyBoundary(x, y, nx, ny))
     {
         //todo: should we inhibit transcription on chromatin that sticks to the boundary?
         logger.logMsg(DEBUG, "Microemulsion::performRandomSwap - Swap not allowed by sticky boundary! "
