@@ -21,9 +21,9 @@ private:
     Grid &grid;
     Logger &logger;
     double omega, deltaEmin;
-    static pcg32 randomGenerator;
+    static std::mt19937 randomGenerator;
     #pragma omp threadprivate(randomGenerator)
-    static pcg64 randomGenerator_64;
+    static std::mt19937_64 randomGenerator_64;
     #pragma omp threadprivate(randomGenerator_64)
     std::uniform_real_distribution<double> uniformProbabilityDistribution;
     std::uniform_int_distribution<int> coloursDistribution;

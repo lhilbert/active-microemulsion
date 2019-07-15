@@ -28,7 +28,7 @@ private:
 //    const unsigned char dim = 2;
     // Columns and rows are the values of the inner number of rows and columns, without the external halo.
     const int columns, rows;
-    static pcg32 randomNumberGenerator;
+    static std::mt19937 randomNumberGenerator;
     #pragma omp threadprivate(randomNumberGenerator)
     int numElements;
     CellData **data;

@@ -11,27 +11,27 @@
 #include <boost/random/random_device.hpp>
 #include <boost/random/mersenne_twister.hpp>
 // Testing PCG generator: more info at http://www.pcg-random.org/
-#include <pcg_random.hpp>
+// #include <pcg_random.hpp>
 
-static pcg32 fooRNG; // This is just a hack to get icpc to not complain about pcg* types being incomplete...
-static pcg64 fooRNG64;
+// static pcg32 fooRNG; // This is just a hack to get icpc to not complain about pcg* types being incomplete...
+// static pcg64 fooRNG64;
 
 class RandomGenerator
 {
 private:
-//    static std::mt19937 rng;
-    static pcg32 rng;
+    static std::mt19937 rng;
+//    static pcg32 rng;
     #pragma omp threadprivate(rng)
-//    static std::mt19937_64 rng64;
-    static pcg64 rng64;
+    static std::mt19937_64 rng64;
+//    static pcg64 rng64;
     #pragma omp threadprivate(rng64)
 
 public:
     static RandomGenerator& getInstance();
     
-    pcg32& getGenerator();
+    std::mt19937& getGenerator();
     
-    pcg64& getGenerator64();
+    std::mt19937_64& getGenerator64();
 
 private:
     RandomGenerator();

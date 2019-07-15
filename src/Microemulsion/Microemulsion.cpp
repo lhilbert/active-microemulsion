@@ -6,8 +6,8 @@
 #include "Microemulsion.h"
 #include "../Utils/RandomGenerator.h"
 
-pcg32 Microemulsion::randomGenerator = RandomGenerator::getInstance().getGenerator();
-pcg64 Microemulsion::randomGenerator_64 = RandomGenerator::getInstance().getGenerator64();
+std::mt19937 Microemulsion::randomGenerator = RandomGenerator::getInstance().getGenerator();
+std::mt19937_64 Microemulsion::randomGenerator_64 = RandomGenerator::getInstance().getGenerator64();
 
 Microemulsion::Microemulsion(Grid &grid, double omega, Logger &logger, double deltaTChem, double kOn, double kOff,
                              double kChromPlus, double kChromMinus, double kRnaPlus, double kRnaMinus,

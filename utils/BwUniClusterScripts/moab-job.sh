@@ -103,7 +103,6 @@ echo Config flags: ${CONFIG_FLAGS} #debug
 OUT_DIR="Out_$(echo ${CONFIG_FLAGS} | flagsToNameFilter)_$$"
 CHAIN_CONF_FILE="$(echo ${CONFIG_FLAGS} | getChainConfig)"
 CHAIN_GEN_ARGS="-C 0.5 -I ${CHAIN_GEN_I} ${CHAIN_GEN_s}" # Number of chains is automatically set below according to grid size
-#CHAIN_GEN_ARGS="-C 0.5 -I 0.2" # Number of chains is automatically set below according to grid size
 RESOLUTION="$(echo ${CONFIG_FLAGS} | getResolutionConfig)"
 
 # Settings for config data and shared libraries

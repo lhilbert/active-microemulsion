@@ -1,7 +1,19 @@
+UNAME := $(shell uname)
+
+# Here the compilation command for Linux
+ifeq ($(UNAME), Linux)
 CC = g++
 #CFLAGS = -std=c++14 -O3 -Wall -pedantic -Werror -fopenmp
 CFLAGS = -std=c++14 -O3 -Wall -pedantic -Werror -fopenmp -pg # Profiling only
 LIBS = -lboost_program_options -lboost_system -lboost_filesystem -lm
+endif
+
+# Here the compilation command for Mac
+ifeq ($(UNAME), Darwin)
+CC = clang++
+CFLAGS = -std=c++14 -O3 -Wall -pedantic -Werror -Xpreprocessor -fopenmp
+LIBS = -lboost_program_options -lboost_system -lboost_filesystem -lm -lomp
+endif
 
 OBJ = src/main.o \
       src/Timing/Timing.o \
@@ -19,8 +31,15 @@ OBJ = src/main.o \
 all:  $(OBJ)
 	$(CC) $(CFLAGS) -o active-microemulsion $(OBJ) $(LIBS)
 
+ifeq ($(UNAME), Linux)
 %.o : %.cpp
-	$(CC) -c $(CFLAGS) $*.cpp -o $*.o $(LIBS)
+    $(CC) -c $(CFLAGS) $*.cpp -o $*.o $(LIBS)
+endif
+
+ifeq ($(UNAME), Darwin)
+%.o : %.cpp
+	$(CC) -c $(CFLAGS) $*.cpp -o $*.o
+endif
 
 clean:
 	rm $(OBJ)
