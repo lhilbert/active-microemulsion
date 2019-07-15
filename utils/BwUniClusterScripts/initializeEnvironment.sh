@@ -21,6 +21,10 @@ for item in ${targets[@]}; do
     [[ ! -e ${item} ]] && ln -s ${targetDir}/${item} ./
 done
 
+# Link libiomp5.so for PGO
+echo "Linking libiomp5.so..."
+ln -s /opt/intel/compilers_and_libraries/linux/lib/intel64/libiomp5.so lib/.
+
 # Load python3 module
 echo "Don't forget to load python3 module with:"
 echo "module load devel/python/3.5.2"

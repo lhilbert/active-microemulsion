@@ -427,7 +427,7 @@ int main(int argc, const char **argv)
                               allChains, cutoffChains, permissibleChains, kOn, kOff,
                               kChromPlus, kChromMinus, kRnaPlus, kRnaMinus,
                               kRnaTransfer,
-                              t);
+                              t/timeMultiplier);
         }
         // Time-stepping loop
         while (t < snapshotSchedule.getNextEventTime())
