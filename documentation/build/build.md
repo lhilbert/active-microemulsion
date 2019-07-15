@@ -38,7 +38,7 @@ In this case you need to make sure all the dependencies are installed. For the `
 ## Building on Mac / OS X
 (This is tested on Mojave on MacBook Pro)
 
-You will have to install some dependendencies before building. If you have not done so yet, install homebrew. The instructions for doing so can be found at https://brew.sh
+You will have to install some dependencies before building. If you have not done so yet, install homebrew. The instructions for doing so can be found at https://brew.sh
 
 When the homebrew install requests a password, this is your Mac login password.
 
