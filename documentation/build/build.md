@@ -59,7 +59,7 @@ make
 
 You can test the compiled executable by running
 ```
-./active-microemulsion --chain-config ./ChainConfigs/halfActive_50x50.chains -T 100
+./active-microemulsion --chains-config ./ChainConfigs/halfActive_50x50.chains -T 100
 ```
 
 It should produce a new folder "/Out" inside of 'active-micromulsion', which should contain `.pgm` image files. These you can inspect with Preview or by pressing the Space Bar. They should show DNA, RNA, and Transcription channels. Especially the DNA images should display chain- or polymer-like structures.
