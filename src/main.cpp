@@ -336,7 +336,7 @@ int main(int argc, const char **argv)
     std::set<ChainId> allChains, cutoffChains, permissibleChains;
     Grid grid(columns, rows, logger);
     GridInitializer::initializeInnerGridAs(grid, CellData::chemicalPropertiesOf(RBP, NOT_ACTIVE));
-    // ...and read chains configuration
+    // ...and read chain configuration file, construct chain structure from that file
     ChainConfig chainConfig(logger);
     std::ifstream chainConfigFile(inputChainsFile);
     while (chainConfigFile >> chainConfig)
@@ -363,6 +363,8 @@ int main(int argc, const char **argv)
             permissibleChains.insert(newChain.begin(), newChain.end());
         }
     }
+    // Chain construction over
+    
     
     int numRbpCells = grid.getSpeciesCount(RBP);
     int numChromatinCells = numInnerCells - numRbpCells;
@@ -404,6 +406,7 @@ int main(int argc, const char **argv)
     rnaWriter.setData(grid.getData());
     transcriptionWriter.setData(grid.getData());
     
+    // --- actual iteration steps of the simulation are carried out from here on ...
     // Simulation loops
     double t = 0;
     // Write initial data to file
@@ -458,10 +461,13 @@ int main(int argc, const char **argv)
         }
     }
     logger.logEvent(DEBUG, t, "Exiting main time-stepping loop");
+    // --- iteration steps of simulation are over here
     
     //
     return 0;
 }
+
+
 
 void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule, Microemulsion &microemulsion,
                        const std::set<ChainId> &allChains, const std::set<ChainId> &cutoffChains,
@@ -480,9 +486,9 @@ void applyCutoffEvents(Logger &logger, EventSchedule<CutoffEvent> &eventSchedule
         else if (event == ACTINOMYCIN_D)
         {
             logger.logEvent(PRODUCTION, t, "EVENT: Applying Actinomycin D condition");
-            microemulsion.setKChromPlus(0);
-            microemulsion.setKChromMinus(0);
-            microemulsion.setKRnaPlus(0);
+            microemulsion.setKChromPlus(0); // Chromatin state no longer changes
+            microemulsion.setKChromMinus(0); // Chromatin state no longer changes
+            microemulsion.setKRnaPlus(0); // RNA production is halted
             microemulsion.setKRnaMinusTxn(0); // RNA attached at transcription site is not degraded
             microemulsion.setKRnaTransfer(0); // RNA should not be transferred from TXN sites to RBP
         }
