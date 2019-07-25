@@ -28,6 +28,8 @@ The process can also be compiled with `gcc` or `clang`, either by using the resp
 
 There is more info on building with optimization on the bwUniCluster in the tutorial: https://github.com/lhilbert/active-microemulsion/blob/master/documentation/tutorial.md
 
+Update: trying to go back to compiling with `g++` via `make` command. First, load recent version of compiler: `module load compiler/gnu/9.1`. Then, command `make`.
+
 ## Building on other HPC clusters
 Building on other clusters should require simply to identify which modules are responsible for the dependencies. Then simply edit the  `cmake-with-icc` script to load the correct modules.
 
