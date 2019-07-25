@@ -3,9 +3,8 @@ UNAME := $(shell uname)
 # Here the compilation command for Linux
 ifeq ($(UNAME), Linux)
 CC = g++
-#CFLAGS = -std=c++14 -O3 -Wall -pedantic -Werror -fopenmp
-CFLAGS = -std=c++14 -O3 -Wall -pedantic -Werror -fopenmp -pg # Profiling only
-LIBS = -lboost_program_options -lboost_system -lboost_filesystem -lm
+CFLAGS = -std=c++14 -O3 -Wall -pedantic -Werror -fopenmp
+LIBS = -lboost_program_options -lboost_system -lboost_filesystem -lm -lomp
 endif
 
 # Here the compilation command for Mac
@@ -33,7 +32,7 @@ all:  $(OBJ)
 
 ifeq ($(UNAME), Linux)
 %.o : %.cpp
-    $(CC) -c $(CFLAGS) $*.cpp -o $*.o $(LIBS)
+	$(CC) -c $(CFLAGS) $*.cpp -o $*.o
 endif
 
 ifeq ($(UNAME), Darwin)
