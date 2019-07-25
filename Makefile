@@ -32,7 +32,7 @@ all:  $(OBJ)
 
 ifeq ($(UNAME), Linux)
 %.o : %.cpp
-	$(CC) -c $(CFLAGS) $*.cpp -o $*.o
+	$(CC) -c $(CFLAGS) $*.cpp -o $*.o $(LIBS)
 endif
 
 ifeq ($(UNAME), Darwin)
