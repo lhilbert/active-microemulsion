@@ -5,6 +5,7 @@
 #include <algorithm>
 #include "Microemulsion.h"
 #include "../Utils/RandomGenerator.h"
+#include <cstring>
 
 std::mt19937 Microemulsion::randomGenerator = RandomGenerator::getInstance().getGenerator();
 std::mt19937_64 Microemulsion::randomGenerator_64 = RandomGenerator::getInstance().getGenerator64();
