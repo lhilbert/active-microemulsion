@@ -4,7 +4,7 @@ UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
 CC = g++
 CFLAGS = -std=c++14 -O3 -Wall -pedantic -Werror -fopenmp
-LIBS = -lboost_program_options -lboost_system -lboost_filesystem -lm -lomp
+LIBS = -lboost_program_options -lboost_system -lboost_filesystem -lm
 endif
 
 # Here the compilation command for Mac
