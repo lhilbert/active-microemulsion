@@ -2,7 +2,7 @@ UNAME := $(shell uname)
 
 # Here the compilation command for Linux
 ifeq ($(UNAME), Linux)
-CC = g++
+CC = clang++
 CFLAGS = -std=c++14 -O3 -Wall -pedantic -Werror -fopenmp
 LIBS = -lboost_program_options -lboost_system -lboost_filesystem -lm -lomp
 endif
