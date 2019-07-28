@@ -1,5 +1,5 @@
 # active-microemulsion
-Package for the lattice-based simulation of active polymer microemulsions, such as DNA.
+Package for the lattice-based simulation of active polymer microemulsions, such as dense DNA suspensions.
 
 ## How to build
 ### Dependencies
