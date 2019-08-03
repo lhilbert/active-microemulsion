@@ -4,11 +4,11 @@ Being documentation as important as the code itself, we want to make sure it is 
 together with the code.
 
 ### Sections
-- [Build](build/build.md)
-- [Configure](configure/configure.md)
-- [Run](run/run.md)
-- [Schedule](schedule/schedule.md)
-- [Contrast Analysis](analysis/contrastAnalysis.md)
+- [Building an executable program](build/build.md)
+- [Configuring initial simulation states](configure/configure.md)
+- [Running single jobs](run/run.md)
+- [Cluster job scheduling](schedule/schedule.md)
+- [Contrast analysis](analysis/contrastAnalysis.md)
 
 ### Step-by-step tutorial
 You can find a step-by-step tutorial for BwUniCluster [here](https://github.com/lhilbert/active-microemulsion/blob/master/documentation/tutorial.md)
