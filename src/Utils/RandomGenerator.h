@@ -24,10 +24,10 @@ class RandomGenerator
 private:
     static std::mt19937 rng;
 //    static pcg32 rng;
-    #pragma omp threadprivate(rng)
+//    #pragma omp threadprivate(rng)
     static std::mt19937_64 rng64;
 //    static pcg64 rng64;
-    #pragma omp threadprivate(rng64)
+//    #pragma omp threadprivate(rng64)
 
 public:
     static RandomGenerator& getInstance();
