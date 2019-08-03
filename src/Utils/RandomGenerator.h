@@ -15,8 +15,8 @@
 
 // static pcg32 fooRNG; // This is just a hack to get icpc to not complain about pcg* types being incomplete...
 // static pcg64 fooRNG64;
-static rng fooRNG; // This is just a hack to get icpc to not complain about pcg* types being incomplete...
-static rng64 fooRNG64;
+// static rng fooRNG; // This is just a hack to get icpc to not complain about pcg* types being incomplete...
+// static rng64 fooRNG64;
 
 
 class RandomGenerator
