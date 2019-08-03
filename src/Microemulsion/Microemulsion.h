@@ -24,7 +24,7 @@ private:
     static std::mt19937 randomGenerator;
     #pragma omp threadprivate(randomGenerator)
     static std::mt19937_64 randomGenerator_64;
-    #pragma omp threadprivate(randomGenerator_64)
+    //#pragma omp threadprivate(randomGenerator_64)
     std::uniform_real_distribution<double> uniformProbabilityDistribution;
     std::uniform_int_distribution<int> coloursDistribution;
     double dtChem, kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinusRbp, kRnaMinusTxn, kRnaTransfer;
