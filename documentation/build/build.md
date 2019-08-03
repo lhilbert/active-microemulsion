@@ -17,25 +17,19 @@ If you do not have 'git' installed, you need to do so for cloning. How you do th
 ## Building on bwUniCluster
 On bwUniCluster (the HPC cluster for Baden-Wuerttemberg's universities), the build process is straightforward, as all the dependencies are available as modules.
 
-Assuming the repo has been cloned into the `active-microemulsion` folder, it is sufficient to run:
+(Tested) Assuming the repo has been cloned into the `active-microemulsion` folder, it is sufficient to run:
 ```
 cd active-microemulsion
 ./cmake-with-icc
 ```
 The `cmake-with-icc` script is simply a wrapper which loads the relevant modules for the dependencies and then launches the compilation process using `cmake`.
 
-The process can also be compiled with `gcc` or `clang`, either by using the respective scripts or by manually loading the relevant modules and executing the appropriate cmake commands.
+(Not tested) The process can also be compiled with `gcc` or `clang`, either by using the respective scripts or by manually loading the relevant modules and executing the appropriate cmake commands.
 
-There is more info on building with optimization on the bwUniCluster in the tutorial: https://github.com/lhilbert/active-microemulsion/blob/master/documentation/tutorial.md
-
-Update: trying to go back to compiling with `g++` via `make` command. First, load recent version of compiler: `module load compiler/gnu/9.1`. We also need the boost libraries, so `module load lib/boost`. Then, command `make`.
+(Not tested) There is more info on building with optimization on the bwUniCluster in the tutorial: https://github.com/lhilbert/active-microemulsion/blob/master/documentation/tutorial.md
 
 ## Building on other HPC clusters
-Building on other clusters should require simply to identify which modules are responsible for the dependencies. Then simply edit the  `cmake-with-icc` script to load the correct modules.
-
-## Building on workstation
-The same scripts can be used for building on personal workstations, as modules are not loaded if the module command is not available.
-In this case you need to make sure all the dependencies are installed. For the `active-microemulsion` executable, having Boost is the only requirement. On Ubuntu it can be easily installed with the `libboost-all-dev` package.
+(Not tested) Building on other clusters should require simply to identify which modules are responsible for the dependencies. Then simply edit the  `cmake-with-icc` script to load the correct modules.
 
 ## Building on Mac / OS X
 (This is tested on Mojave on MacBook Pro)
@@ -59,7 +53,8 @@ Then, you need to navigate into the 'active-microemulsion' directory that you cl
 make
 ```
 
-You can test the compiled executable by running
+## Test run for local and cluster executables
+Once you have obtained an error-free compilation, you can test the compiled executable by running this on the command line
 ```
 ./active-microemulsion --chains-config ./ChainConfigs/halfActive_50x50.chains -T 100
 ```
