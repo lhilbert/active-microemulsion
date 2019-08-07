@@ -5,24 +5,23 @@ from schedulingLib import SimulationSet
 emailAddress = "foo@bar"
 notifyEvents = "bea" # b=begin, e=end, a=abort
 
-activation = 10
-endTime = 90
+activation = 600
+endTime = 7200
 
 dryRun = True # Switch to False to actually schedule jobs
 
 simSet = SimulationSet(emailAddress,
-                       18,
-                       "FooBar",
-                       endTime,
+                       48,
+                       "OutDirectoryName",
+                       endTime, 
                        notifyEvents,
                        (100,100),
-                       staticOpts="-w 0.25 -s 4500 --kRnaPlus 1.1111e-1 --kRnaMinusRbp 5.5555e-4 --kChromPlus 0.075 --kChromMinus 1.6666e-3 --kOn 1.852e-4 --kOff 1.6666e-3 --kRnaTransfer 5.5555e-4 -m -t 1",
-                       chainGeneratorOpts="--chain-generator-sparse --chain-generator-I 0.4 --chain-generator-n 25",
+                       staticOpts="-w 0.33 -s 10500 --kRnaPlus 6e-2 --kRnaMinusRbp 5.5555e-4 --kChromPlus 1.5e-3 --kChromMinus 1.6666e-3 --kOn 2.500e-4 --kOff 1.6666e-3 --kRnaTransfer 3.0e-1 -t 60",
+                       chainGeneratorOpts="--chain-generator-sparse --chain-generator-I 0.2 --chain-generator-n 25",
                        activationTime=activation,
                        dryRun=dryRun,
-                       additionalSnapshots=(10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.25, 11.5, 11.75, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5, 18.5, 19.5),
-                       additionalTreatmentTimes=[x/10 for x in range(101,109,1)]
-                                                + [x/10 for x in range(111,119,1)])
+                       additionalSnapshots=(),
+                       additionalTreatmentTimes=[])
 simSet.schedule()
 print("--> Jobs scheduled: %d", simSet.numBundles())
 print("--> Simulations scheduled: %d", simSet.numSimulations())

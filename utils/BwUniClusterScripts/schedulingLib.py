@@ -162,7 +162,7 @@ class SimulationSet:
                  additionalTreatmentTimes=(),
                  performControl=True,
                  performAdditionalRelaxations=True,
-                 treatment2EndDelay=30,
+                 treatment2EndDelay=1800,
                  repoBaseDir="", # If not set, the CWD will be taken
                  dryRun=False):
         self.emailAddress = emailAddress
@@ -205,7 +205,7 @@ class SimulationSet:
 
     def __generateSimulations(self):
         for endTime in \
-                [x for x in range(1, self.endTime + 1)] \
+                [x for x in range(60, self.endTime + 60)] \
                 + [x + self.treatment2EndDelay for x in self.additionalTreatmentTimes]:
             # For each possible endTime, check what runs we can schedule with it
 
@@ -234,7 +234,7 @@ class SimulationSet:
             self.bundles.append(bundle)
 
     def __generateTreatmentRuns(self, endTime, folder):
-        if endTime > self.activationTime + self.treatment2EndDelay:
+        if endTime >= self.activationTime + self.treatment2EndDelay:
             treatmentTime = endTime - self.treatment2EndDelay
             activationFlags = self.getActivationFlags(treatmentTime)
             for treatment in self.treatmentFlags:
@@ -255,7 +255,7 @@ class SimulationSet:
                 self.simulations.append(curSim)
 
     def __generateRelaxationRuns(self, endTime, folder):
-        if endTime > self.activationTime and endTime <= self.treatment2EndDelay:
+        if endTime >= self.activationTime and endTime <= self.treatment2EndDelay:
             eventsFlags = "--flavopiridol 0"
             curSim = Simulation(folder, self.repoBaseDir, 1, self.size,
                                 self.chainGeneratorOpts, self.staticOpts,
