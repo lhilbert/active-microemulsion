@@ -205,7 +205,7 @@ class SimulationSet:
 
     def __generateSimulations(self):
         for endTime in \
-                [x for x in range(60, self.endTime + 60,60)] \
+                [x for x in range(0, self.endTime + 60,60)] \
                 + [x + self.treatment2EndDelay for x in self.additionalTreatmentTimes]:
             # For each possible endTime, check what runs we can schedule with it
 
@@ -215,7 +215,7 @@ class SimulationSet:
             self.__generateControlRuns(endTime, folder)
 
             # Generate additional relaxation runs
-            self.__generateRelaxationRuns(endTime, folder)
+            # self.__generateRelaxationRuns(endTime, folder)
 
             # Generate treatment runs
             self.__generateTreatmentRuns(endTime, folder)
@@ -234,9 +234,13 @@ class SimulationSet:
             self.bundles.append(bundle)
 
     def __generateTreatmentRuns(self, endTime, folder):
-        if endTime >= self.activationTime + self.treatment2EndDelay:
+        if endTime >= self.treatment2EndDelay:
             treatmentTime = endTime - self.treatment2EndDelay
-            activationFlags = self.getActivationFlags(treatmentTime)
+            if treatmentTime <= self.activationTime
+                activationFlags = "";
+            else
+                activationFlags = self.getActivationFlags(treatmentTime)
+            
             for treatment in self.treatmentFlags:
                 if treatment:
                     if type(treatmentTime) == float:
