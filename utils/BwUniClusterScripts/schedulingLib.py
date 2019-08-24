@@ -240,9 +240,10 @@ class SimulationSet:
                 activationFlags = ""
             else:
                 activationFlags = self.getActivationFlags(treatmentTime)
-            
+        
             for treatment in self.treatmentFlags:
                 if treatment:
+                    thisFolder = folder + treatment
                     if type(treatmentTime) == float:
                         treatmentFlag = treatment + " %f" % (treatmentTime)
                         endTime = float(endTime)
@@ -251,7 +252,7 @@ class SimulationSet:
                 else:
                     treatmentFlag = ""
                 eventsFlags = "--flavopiridol 0 %s %s" % (activationFlags, treatmentFlag)
-                curSim = Simulation(folder, self.repoBaseDir, 1, self.size,
+                curSim = Simulation(thisFolder, self.repoBaseDir, 1, self.size,
                                     self.chainGeneratorOpts, self.staticOpts,
                                     self.additionalSnapshots,
                                     eventsFlags,
