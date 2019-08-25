@@ -534,10 +534,15 @@ bool Microemulsion::performChemicalReactionsDecay(int column, int row)
     CellData &cellData = grid.getElement(column, row);
     
     // 4) Now let RNA decay from active chromatin and RBP sites
-    if (cellData.isRBP() || cellData.isActiveChromatin())
+    if (cellData.isRBP())
     {
         isChemPropChanged = isChemPropChanged
                 || performRnaDecayReaction(cellData, kRnaMinusRbp);
+    }
+    if (cellData.isChromatin())
+    {
+        isChemPropChanged = isChemPropChanged
+                || performRnaDecayReaction(cellData, kRnaMinusTxn);
     }
     // 5) Now set as non-active RBP sites which have reached 0 RNA
     if (cellData.isActiveRBP() && cellData.getRnaContent() == 0)
