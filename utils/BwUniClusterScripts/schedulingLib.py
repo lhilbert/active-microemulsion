@@ -205,7 +205,7 @@ class SimulationSet:
 
     def __generateSimulations(self):
         for endTime in \
-                [x for x in range(0, self.endTime + 60,60)] \
+                [x for x in range(0, self.endTime + 20,20)] \
                 + [x + self.treatment2EndDelay for x in self.additionalTreatmentTimes]:
             # For each possible endTime, check what runs we can schedule with it
 
