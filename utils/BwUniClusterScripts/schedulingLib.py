@@ -234,30 +234,29 @@ class SimulationSet:
             self.bundles.append(bundle)
 
     def __generateTreatmentRuns(self, endTime, folder):
-        if endTime >= self.treatment2EndDelay:
-            treatmentTime = endTime - self.treatment2EndDelay
-            if treatmentTime <= self.activationTime:
-                activationFlags = ""
-            else:
-                activationFlags = self.getActivationFlags(treatmentTime)
+        treatmentTime = endTime - self.treatment2EndDelay
+        if treatmentTime <= self.activationTime:
+            activationFlags = ""
+        else:
+            activationFlags = self.getActivationFlags(treatmentTime)
         
-            for treatment in self.treatmentFlags:
-                if treatment:
-                    thisFolder = folder + treatment
-                    if type(treatmentTime) == float:
-                        treatmentFlag = treatment + " %f" % (treatmentTime)
-                        endTime = float(endTime)
-                    else:
-                        treatmentFlag = treatment + " %d" % (treatmentTime)
+        for treatment in self.treatmentFlags:
+            if treatment:
+                thisFolder = folder + treatment
+                if type(treatmentTime) == float:
+                    treatmentFlag = treatment + " %f" % (treatmentTime)
+                    endTime = float(endTime)
                 else:
-                    treatmentFlag = ""
-                eventsFlags = "--flavopiridol 0 %s %s" % (activationFlags, treatmentFlag)
-                curSim = Simulation(thisFolder, self.repoBaseDir, 1, self.size,
-                                    self.chainGeneratorOpts, self.staticOpts,
-                                    self.additionalSnapshots,
-                                    eventsFlags,
-                                    endTime, True)
-                self.simulations.append(curSim)
+                    treatmentFlag = treatment + " %d" % (treatmentTime)
+            else:
+                treatmentFlag = ""
+            eventsFlags = "--flavopiridol 0 %s %s" % (activationFlags, treatmentFlag)
+            curSim = Simulation(thisFolder, self.repoBaseDir, 1, self.size,
+                                self.chainGeneratorOpts, self.staticOpts,
+                                self.additionalSnapshots,
+                                eventsFlags,
+                                endTime, True)
+            self.simulations.append(curSim)
 
     def __generateRelaxationRuns(self, endTime, folder):
         if endTime >= self.activationTime and endTime <= self.treatment2EndDelay:
