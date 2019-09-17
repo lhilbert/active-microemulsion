@@ -236,6 +236,7 @@ class SimulationSet:
     def __generateTreatmentRuns(self, endTime, folder):
         treatmentTime = endTime - self.treatment2EndDelay
         if treatmentTime <= self.activationTime:
+            treatmentTime = 0
             activationFlags = ""
         else:
             activationFlags = self.getActivationFlags(treatmentTime)
