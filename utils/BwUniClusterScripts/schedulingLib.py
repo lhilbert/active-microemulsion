@@ -215,7 +215,7 @@ class SimulationSet:
             self.__generateControlRuns(endTime, folder)
 
             # Generate additional relaxation runs
-            # self.__generateRelaxationRuns(endTime, folder)
+            self.__generateRelaxationRuns(endTime, folder)
 
             # Generate treatment runs
             self.__generateTreatmentRuns(endTime, folder)
@@ -260,14 +260,14 @@ class SimulationSet:
             self.simulations.append(curSim)
 
     def __generateRelaxationRuns(self, endTime, folder):
-        if endTime >= self.activationTime and endTime <= self.treatment2EndDelay:
-            eventsFlags = "--flavopiridol 0"
-            curSim = Simulation(folder, self.repoBaseDir, 1, self.size,
-                                self.chainGeneratorOpts, self.staticOpts,
-                                self.additionalSnapshots,
-                                eventsFlags,
-                                endTime, True)
-            self.simulations.append(curSim)
+        eventsFlags = "--flavopiridol 0"
+        thisFolder = folder + "_AAmanitin"
+        curSim = Simulation(thisFolder, self.repoBaseDir, 1, self.size,
+                            self.chainGeneratorOpts, self.staticOpts,
+                            self.additionalSnapshots,
+                            eventsFlags,
+                            endTime, True)
+        self.simulations.append(curSim)
 
     def __generateControlRuns(self, endTime, folder):
         activationFlags = self.getActivationFlags(endTime)
