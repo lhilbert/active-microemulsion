@@ -36,7 +36,7 @@ int main(int argc, const char **argv)
     double snapshotInterval = -1;
     double extraSnapshotTimeOffset = -1;
     double extraSnapshotTimeAbs = -1;
-    double omega = 0.5; //todo read this from config
+    double omega = 0.33; //todo read this from config
     double kOn, kOff, kChromPlus, kChromMinus, kRnaPlus, kRnaMinus, kRnaTransfer, kMax;
     std::set<double> kSet;
     
@@ -98,23 +98,23 @@ int main(int argc, const char **argv)
             ("height,H", opt::value<int>(&rows)->default_value(50), "Height of the simulation grid")
             ("threads", opt::value<int>(&numThreads)->default_value(-1),
              "Number of threads to use for parallelization. A negative value lets OMP_NUM_THREADS take precedence")
-            ("omega,w", opt::value<double>(&omega)->default_value(0.25),
+            ("omega,w", opt::value<double>(&omega)->default_value(0.33),
              "Energy cost for contiguity of non-affine species (omega model parameter)")
-            ("sppps,s", opt::value<int>(&swapsPerPixelPerUnitTime)->default_value(3000),
+            ("sppps,s", opt::value<int>(&swapsPerPixelPerUnitTime)->default_value(4500),
              "Number of average swap attempts per pixel per second")
-            ("kOn", opt::value<double>(&kOn)->default_value(1.25e-3),
+            ("kOn", opt::value<double>(&kOn)->default_value(2.5e-4),
              "Reaction rate - Chromatin from non-transcribable to transcribable state")
-            ("kOff", opt::value<double>(&kOff)->default_value(2.5e-3),
+            ("kOff", opt::value<double>(&kOff)->default_value(3.3333e-3),
              "Reaction rate - Chromatin from transcribable to non-transcribable state")
-            ("kChromPlus", opt::value<double>(&kChromPlus)->default_value(4.4444e-3),
+            ("kChromPlus", opt::value<double>(&kChromPlus)->default_value(1.5e-3),
              "Reaction rate - Transcription turned ON")
-            ("kChromMinus", opt::value<double>(&kChromMinus)->default_value(1.1111e-3),
+            ("kChromMinus", opt::value<double>(&kChromMinus)->default_value(1.6666e-3),
              "Reaction rate - Transcription turned OFF")
-            ("kRnaPlus", opt::value<double>(&kRnaPlus)->default_value(4.16666e-2),
+            ("kRnaPlus", opt::value<double>(&kRnaPlus)->default_value(3e-1),
              "Reaction rate - RBP from free to bound state")
-            ("kRnaMinusRbp", opt::value<double>(&kRnaMinus)->default_value(4.16666e-4),
+            ("kRnaMinusRbp", opt::value<double>(&kRnaMinus)->default_value(8.3333e-4),
              "Reaction rate - RBP from bound to free state")
-            ("kRnaTransfer", opt::value<double>(&kRnaTransfer)->default_value(1.666666666e-2),
+            ("kRnaTransfer", opt::value<double>(&kRnaTransfer)->default_value(3.3e-3),
              "Reaction rate - RNA migrating from transcription site to an RBP site");
     opt::variables_map varsMap;
     opt::store(opt::parse_command_line(argc, argv, argsDescription), varsMap);
