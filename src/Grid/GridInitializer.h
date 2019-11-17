@@ -18,6 +18,8 @@ class GridInitializer
 public:
     static int initializeInnerGridAs(Grid &grid, ChemicalProperties chemicalProperties, Flags flags = 0);
     
+    static int initializeOuterGridAs(Grid &grid, ChemicalProperties chemicalProperties, Flags flags = 0);
+    
     static int initializeGridRandomly(Grid &grid, double randomRatio, ChemicalProperties chemicalProperties, Flags flags = 0);
     
     /**

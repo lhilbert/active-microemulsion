@@ -21,6 +21,32 @@ int GridInitializer::initializeInnerGridAs(Grid &grid, ChemicalProperties chemic
     return grid.columns * grid.rows;
 }
 
+int GridInitializer::initializeOuterGridAs(Grid &grid, ChemicalProperties chemicalProperties, Flags flags)
+{
+    // First do the first index (colums)
+    for (int i = grid.getFirstColumn()-1; i <= grid.getLastColumn()+1; ++i)
+    {
+        grid.setChemicalProperties(i, grid.getFirstRow()-1, chemicalProperties);
+        grid.setFlags(i, grid.getFirstRow()-1, flags);
+        
+        grid.setChemicalProperties(i, grid.getLastRow()+1, chemicalProperties);
+        grid.setFlags(i, grid.getLastRow()+1, flags);
+    }
+    
+    // Then do the second index (rows)
+    for (int j = grid.getFirstRow()-1; j <= grid.getLastRow()+1; ++j)
+    {
+        grid.setChemicalProperties(grid.getFirstColumn()-1,j, chemicalProperties);
+        grid.setFlags(grid.getFirstColumn()-1, j, flags);
+        
+        grid.setChemicalProperties(grid.getLastColumn()+1,j, chemicalProperties);
+        grid.setFlags(grid.getLastColumn()+1, j, flags);
+    }
+    
+    return grid.columns * grid.rows;
+}
+
+
 int GridInitializer::initializeGridRandomly(Grid &grid, double randomRatio, ChemicalProperties chemicalProperties,
                                             Flags flags)
 {

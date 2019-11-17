@@ -336,6 +336,9 @@ int main(int argc, const char **argv)
     std::set<ChainId> allChains, cutoffChains, permissibleChains;
     Grid grid(columns, rows, logger);
     GridInitializer::initializeInnerGridAs(grid, CellData::chemicalPropertiesOf(RBP, NOT_ACTIVE));
+    if (!stickyBoundary) {
+        GridInitializer::initializeOuterGridAs(grid, CellData::chemicalPropertiesOf(RBP, NOT_ACTIVE));
+    }
     // ...and read chain configuration file, construct chain structure from that file
     ChainConfig chainConfig(logger);
     std::ifstream chainConfigFile(inputChainsFile);
