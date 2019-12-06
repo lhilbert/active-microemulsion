@@ -4,9 +4,9 @@
 
 import subprocess  # Required by ShellCommand
 import os  # Required for creating the directory where to store jobs, if not present
+import time # required to sleep between queueing calls
 
-THREADS_PER_BUNDLE = 16
-
+THREADS_PER_BUNDLE = 8
 
 class ShellCommand:
     def __init__(self, cmd, echo=True, dryRun=False, timeoutSec=1):
@@ -196,6 +196,7 @@ class SimulationSet:
             bundle.writeJobFile()
             cmd = ShellCommand(bundle, dryRun=self.dryRun, timeoutSec=10)
             bundle.dumpJobFileContent()
+            time.sleep( 5 )
 
     def numSimulations(self):
         return len(self.simulations)

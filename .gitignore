@@ -42,3 +42,5 @@ __pycache__
 .DS_Store
 ChainConfigs/generated.chains
 generated.chains
+utils/ChainFiles/LongTerm_3.chains
+*.chains
