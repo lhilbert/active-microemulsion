@@ -113,7 +113,7 @@ class Chromosome:
     def __buildStepsInDirection(self, direction, otherDirection, directionStep, otherDirectionStep, directionLimit,
                                 otherDirectionLimit):
         counter = 1
-        lineCounter = 1
+        lineCounter = 0
         directionNum = direction2Num[direction]
         # Define the stride in the direction (depends on sparseMode)
         strideTheoretical = 1
@@ -162,12 +162,13 @@ class Chromosome:
 class Configurator:
 
     def __init__(self, domainDimensions, numChromosomes, occupancy, inhibitionProbability, numActiveChains=-1,
-                 sparseMode=False):
+                 sparseMode=False, ballInit = 0):
         self.domainDimensions = domainDimensions
         self.numChromosomes = numChromosomes
         self.occupancy = occupancy
         self.inhibitionProb = inhibitionProbability
         self.numActiveChains = numActiveChains
+        self.ballInit = ballInit
         self.sparseMode = sparseMode
         self.chromosomeStartPositions = []
         self.chromosomeInhibitionFlags = []
@@ -178,7 +179,11 @@ class Configurator:
     def __computeInhibitionFlags(self):
         # TODO: here give the possibility to set just 1 active chain in the exact middle (it will be in the center of
         #  the domain). It should be driven by a specific cmdline flag.
-        if self.numActiveChains < 0:
+        if self.ballInit > 0:
+            # In this case, use the integer value from ballInit and place this number of chains starting from the center of the domain
+            self.chromosomeInhibitionFlags = \
+                [int(randomChoiceWithProbability(self.inhibitionProb)) for x in range(self.ballInit)]
+        elif self.numActiveChains < 0:
             # In this case just draw them randomly with probability
             self.chromosomeInhibitionFlags = \
                 [int(randomChoiceWithProbability(self.inhibitionProb)) for x in range(self.numChromosomes)]
@@ -195,6 +200,7 @@ class Configurator:
             if (len(self.chromosomeInhibitionFlags) > self.numChromosomes):
                 self.chromosomeInhibitionFlags.pop()
         else:
+            # "Normal" case, placement routine with random allocation of activatable chains
             numInhibitedChains = self.numChromosomes - self.numActiveChains
             self.chromosomeInhibitionFlags = [1] * numInhibitedChains + [0] * self.numActiveChains
             random.shuffle(self.chromosomeInhibitionFlags)
@@ -205,8 +211,58 @@ class Configurator:
         domainHeight = self.domainDimensions[1]
         hStep = int(floor(domainWidth / n))
         vStep = int(floor(domainHeight / n))
-        self.chromosomeStartPositions = \
-            [(x, y) for y in range(1, domainHeight + 1, vStep) for x in range(1, domainWidth + 1, hStep)]
+        if self.ballInit == 0:
+            # regular stepping scheme, moving through the lattice line by line
+            self.chromosomeStartPositions = \
+                [(x, y) for y in range(1, domainHeight + 1, vStep) for x in range(1, domainWidth + 1, hStep)]
+        else:
+            # spiral stepping scheme, starting from the center of the lattice moving outward
+            self.chromosomeStartPositions = []
+            currentXstep = floor(n/2.0)-1
+            currentYstep = floor(n/2.0)-1
+            iteration_n = 0
+            currentDir = 0
+            currentLineLength = 2
+            currentLineProgress = 1;
+            twoLineCounter = 0;
+                        
+            while (iteration_n<self.ballInit and iteration_n<self.numChromosomes):
+            
+                currentStartPos = (currentXstep,currentYstep)
+                print(currentStartPos)
+                print(iteration_n)
+                self.chromosomeStartPositions.append((currentXstep*vStep,currentYstep*hStep))
+                
+                if currentDir == 0:
+                    deltax = +1
+                    deltay = 0
+                elif currentDir == 1:
+                    deltax = 0
+                    deltay = +1
+                elif currentDir == 2:
+                    deltax = -1
+                    deltay = 0
+                elif currentDir ==3:
+                    deltax = 0
+                    deltay = -1
+                
+                currentXstep = currentXstep + deltax
+                currentYstep = currentYstep + deltay
+                
+                iteration_n = iteration_n+1
+                
+                currentLineProgress = currentLineProgress+1
+                if currentLineProgress == currentLineLength:
+                    currentLineProgress = 1
+                    twoLineCounter = twoLineCounter + 1
+                    currentDir = (currentDir+1)%4
+                    if twoLineCounter == 2:
+                        currentLineLength = currentLineLength + 1
+                        twoLineCounter = 0
+
+            print(self.chromosomeStartPositions)
+            print(self.chromosomeInhibitionFlags)
+                
         self.chromosomes = \
             [Chromosome(coord,
                         (hStep, vStep),
@@ -255,6 +311,10 @@ if __name__ == "__main__":
                         default=25)
     parser.add_argument("-s", "--sparse", help="Initialize chromatin blocks in the sparsest way possible (more spacing)",
                         dest="sparse", action='store_true')
+    parser.add_argument("-b", "--ball", help="initialize as centered chromatin ball with a number b of chains",
+                        dest="ballInit", type=int,
+                        default=0)
+
 
     args = parser.parse_args()
     #
@@ -268,7 +328,10 @@ if __name__ == "__main__":
         args.numActiveChains = args.numChains - 1
 
     chainConfigurator = Configurator((args.width, args.height), args.numChains, args.chromatinRatio,
-                                     args.inhibitionProbability, args.numActiveChains, sparseMode=args.sparse)
+        args.inhibitionProbability,
+        args.numActiveChains,
+        sparseMode=args.sparse,
+        ballInit = args.ballInit)
     with open(args.outputFile, 'w') as f:
         f.write(str(chainConfigurator))
 
