@@ -58,6 +58,7 @@ int main(int argc, const char **argv)
             ("minutes,m", "Time variables are expressed in minutes instead of seconds")
             ("no-chain-integrity", "Do not enforce chain integrity")
             ("no-sticky-boundary", "Do not make boundary sticky to chromatin")
+            ("RNP-boundary", "Compose boundary of RNA-bound RBPs")
             ("flavopiridol",
              opt::value<std::vector<double>>(&flavopiridolEvents)->multitoken()->zero_tokens()->composing(),
              "Apply Flavopiridol at cutoff time(s). Cutoff time(s) can be specified as parameter")
@@ -140,6 +141,7 @@ int main(int argc, const char **argv)
     bool quietMode = varsMap.count("quiet") > 0;
     bool QuietMode = varsMap.count("Quiet") > 0;
     bool enforceChainIntegrity = varsMap.count("no-chain-integrity") == 0;
+    bool RNPBoundary = varsMap.count("RNP-boundary") > 0;
     bool stickyBoundary = varsMap.count("no-sticky-boundary") == 0;
     bool flavopiridolSwitchPassed = varsMap.count("flavopiridol") > 0;
     bool actinomycinDSwitchPassed = varsMap.count("actinomycin-D") > 0;
@@ -331,15 +333,18 @@ int main(int argc, const char **argv)
     //logger.logMsg(PRODUCTION, "Reading configuration");
     //todo Actually support config files
     
-    // Initialize data structures...
-    logger.logMsg(PRODUCTION, "Reading polymeric chains configuration");
-    std::set<ChainId> allChains, cutoffChains, permissibleChains;
+    // Initialize data structures
+    // Grid: First we initialize the grid that will hold the lattice simulation. Part of this is to assign one species that will initially fill the inner part of the grid, and one species to fill the padding layer, which is one layer of cells running around the actual lattice we simulate
     Grid grid(columns, rows, logger);
     GridInitializer::initializeInnerGridAs(grid, CellData::chemicalPropertiesOf(RBP, NOT_ACTIVE));
-    if (!stickyBoundary) {
+    if (RNPBoundary) {
+        GridInitializer::initializeOuterGridAs(grid, CellData::chemicalPropertiesOf(RBP, ACTIVE));
+    } else if (!stickyBoundary) {
         GridInitializer::initializeOuterGridAs(grid, CellData::chemicalPropertiesOf(RBP, NOT_ACTIVE));
     }
-    // ...and read chain configuration file, construct chain structure from that file
+    // Now, read chain configuration file, construct chain structure from that file
+    logger.logMsg(PRODUCTION, "Reading polymeric chains configuration");
+    std::set<ChainId> allChains, cutoffChains, permissibleChains;
     ChainConfig chainConfig(logger);
     std::ifstream chainConfigFile(inputChainsFile);
     while (chainConfigFile >> chainConfig)
